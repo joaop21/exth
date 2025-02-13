@@ -19,6 +19,10 @@ defmodule Exiris.MixProject do
   end
 
   defp deps do
-    []
+    [
+      {:jason, "~> 1.4"},
+      {:mint, "~> 1.7", only: :dev},
+      {:tesla, "~> 1.14"}
+    ]
   end
 end
