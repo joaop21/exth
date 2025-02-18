@@ -41,9 +41,6 @@ defmodule Exiris.Rpc do
   @type method :: String.t()
   @type params :: list(binary())
 
-  @spec request(method(), params(), id()) :: Request.t()
-  defdelegate request(method, params \\ [], id \\ RequestCounter.next()), to: Request, as: :new
-
   @spec parse_response(id(), jsonrpc(), map() | term()) :: Response.t()
   defdelegate parse_response(id, jsonrpc, result), to: Response, as: :new
 
@@ -54,7 +51,16 @@ defmodule Exiris.Rpc do
     args = Enum.map(params, &Macro.var(&1, __MODULE__))
 
     def unquote(method)(unquote_splicing(args)) do
-      request(to_string(unquote(method)), [unquote_splicing(args)])
+      build_request(to_string(unquote(method)), [unquote_splicing(args)])
     end
+  end
+
+  ###
+  ### Private Functions
+  ###
+
+  @spec build_request(method(), params()) :: Request.t()
+  defp build_request(method, params) do
+    Request.new(method, params, RequestCounter.next())
   end
 end
