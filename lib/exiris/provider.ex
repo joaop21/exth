@@ -1,6 +1,6 @@
 defmodule Exiris.Provider do
   @moduledoc """
-  Provider for executing JSON-RPC requests to EVM nodes through different transport types.
+  Provider for executing JSON-RPC method calls to EVM nodes through different transport types.
 
   A provider encapsulates:
     * The transport type (`:http`, `:ipc`, etc.)
@@ -21,19 +21,19 @@ defmodule Exiris.Provider do
         "/path/to/geth.ipc"
       )
 
-      # Execute requests
+      # Execute method calls
       {:ok, block_number} = provider
-                           |> Provider.request(Provider.eth_block_number())
+                           |> Provider.call(Provider.eth_block_number())
 
       {:ok, balance} = provider
-                      |> Provider.request(Provider.eth_get_balance("0x...", "latest"))
+                      |> Provider.call(Provider.eth_get_balance("0x...", "latest"))
 
   ## Transport Types
 
   The provider supports different transport types through the `Exiris.Transport` module:
 
     * `:http` - HTTP/HTTPS connections (default)
-    * `:ipc` - Unix domain socket connections
+    * `:ipc` - Unix domain socket connections (coming soon)
     * `:ws` - WebSocket connections (coming soon)
 
   Each transport type may accept specific options that can be passed when creating
@@ -64,9 +64,23 @@ defmodule Exiris.Provider do
     }
   end
 
-  @spec request(t(), Request.t()) :: {:ok, binary()} | {:error, any()}
-  def request(%__MODULE__{transport: transport, rpc_url: rpc_url, opts: opts}, request) do
-    with {:ok, %Response{} = response} <- transport.request(request, [rpc_url: rpc_url] ++ opts) do
+  @doc """
+  Executes a JSON-RPC method call through the provider's transport.
+
+  Only requests for methods defined in `Rpc.Methods.public_methods/0` are allowed.
+  Attempting to call undefined methods will return an error.
+  """
+  @spec call(t(), Request.t()) :: {:ok, binary()} | {:error, any()}
+  def call(%__MODULE__{} = provider, %Request{} = request) do
+    if request.method in public_methods_names() do
+      do_call(provider, request)
+    else
+      {:error, :method_not_found}
+    end
+  end
+
+  defp do_call(%__MODULE__{} = provider, request) do
+    with {:ok, %Response{} = response} <- provider.transport.request(request, [rpc_url: provider.rpc_url] ++ provider.opts) do
       {:ok, response.result}
     end
   end
@@ -74,6 +88,18 @@ defmodule Exiris.Provider do
   for {method, params} <- Rpc.Methods.public_methods() do
     args = Enum.map(params, &Macro.var(&1, __MODULE__))
 
+    @doc """
+    Executes the #{method} JSON-RPC method call.
+    """
     defdelegate unquote(method)(unquote_splicing(args)), to: Rpc
+  end
+
+  ###
+  ### Private Functions
+  ###
+
+  @spec public_methods_names() :: [String.t()] 
+  defp public_methods_names() do
+    Enum.map(Rpc.Methods.public_methods(), fn {method, _params} -> to_string(method) end)
   end
 end
