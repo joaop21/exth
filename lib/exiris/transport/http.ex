@@ -2,7 +2,7 @@ defmodule Exiris.Transport.Http do
   @moduledoc """
   HTTP transport implementation for Exiris using Tesla.
   """
-  alias Exiris.Response
+  alias Exiris.Rpc
 
   @behaviour Exiris.Transport
 
@@ -11,7 +11,7 @@ defmodule Exiris.Transport.Http do
   @impl true
   def request(body, opts) do
     with {:ok, response} <- do_post(client(opts), body) do
-      {:ok, Response.new(response["id"], response["jsonrpc"], response["result"])}
+      {:ok, Rpc.parse_response(response["id"], response["jsonrpc"], response["result"])}
     else
       {:error, reason} -> {:error, {:request_failed, reason}}
     end
