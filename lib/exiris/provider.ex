@@ -80,7 +80,8 @@ defmodule Exiris.Provider do
   end
 
   defp do_call(%__MODULE__{} = provider, request) do
-    with {:ok, %Response{} = response} <- provider.transport.request(request, [rpc_url: provider.rpc_url] ++ provider.opts) do
+    with {:ok, %Response{} = response} <-
+           provider.transport.request(request, [rpc_url: provider.rpc_url] ++ provider.opts) do
       {:ok, response.result}
     end
   end
@@ -98,7 +99,7 @@ defmodule Exiris.Provider do
   ### Private Functions
   ###
 
-  @spec public_methods_names() :: [String.t()] 
+  @spec public_methods_names() :: [String.t()]
   defp public_methods_names() do
     Enum.map(Rpc.Methods.public_methods(), fn {method, _params} -> to_string(method) end)
   end
