@@ -66,11 +66,11 @@ defmodule Exiris.RequestCounter do
 
   ## Examples
 
-      iex> Exiris.RequestCounter.increment_and_get(:api_requests)
+      iex> Exiris.RequestCounter.next(:api_requests)
       1
   """
-  @spec increment_and_get(counter_name()) :: non_neg_integer()
-  def increment_and_get(name \\ @default_counter_name) when is_atom(name) do
+  @spec next(counter_name()) :: non_neg_integer()
+  def next(name \\ @default_counter_name) when is_atom(name) do
     name
     |> get_counter()
     |> :atomics.add_get(1, 1)
