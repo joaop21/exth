@@ -1,4 +1,4 @@
-defmodule Exiris.Response do
+defmodule Exiris.Rpc.Response do
   @type t :: %__MODULE__{
           id: pos_integer(),
           jsonrpc: String.t(),

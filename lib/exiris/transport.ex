@@ -3,8 +3,8 @@ defmodule Exiris.Transport do
   Defines a behavior for transport modules (HTTP, WebSocket, IPC).
   """
 
-  alias Exiris.Request
-  alias Exiris.Response
+  alias Exiris.Rpc.Request
+  alias Exiris.Rpc.Response
 
   @type http_opts :: [adapter: Tesla.Client.adapter()]
   @type opts :: [rpc_url: String.t(), http_opts: http_opts()]
