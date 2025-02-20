@@ -12,13 +12,16 @@ defmodule Exiris.PublicClient do
           transport_type: :http,
           rpc_url: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID",
           opts: [timeout: 10_000] # Optional transport-specific options
-
       end
 
-      # All standard RPC methods are available as functions
+      # Using predefined method functions
       {:ok, block_number} = MyClient.eth_block_number()
       {:ok, balance} = MyClient.eth_get_balance("0x123...", "latest")
       {:ok, nonce} = MyClient.eth_get_transaction_count("0x123...", "latest")
+
+      # Using call/1 directly with a request
+      request = Rpc.eth_block_number()
+      {:ok, block_number} = MyClient.call(request)
 
   ## Configuration Options
 
@@ -28,19 +31,31 @@ defmodule Exiris.PublicClient do
 
   ## Available Methods
 
-  All methods defined in `Exiris.Rpc.Methods.public_methods/0` are automatically
-  available as functions in your client module. Each method returns
-  `{:ok, result}` on success or `{:error, reason}` on failure.
+  This module provides two ways to make RPC calls:
 
-  The generated functions handle the creation of the request and its execution
-  through the configured provider, making it simple to interact with the
-  blockchain.
+  1. Predefined method functions:
+     All methods defined in `Exiris.Rpc.Methods.public_methods/0` are automatically
+     available as functions in your client module. These functions handle both the
+     request creation and execution.
+
+  2. Direct call:
+     The `call/1` function allows you to execute pre-built requests. This is useful
+     when you want to prepare requests in advance or reuse them.
+
+  Both approaches only allow calls to methods defined in `public_methods/0` and will
+  return `{:ok, result}` on success or `{:error, reason}` on failure.
+
+  ## Security
+
+  The client enforces that only officially supported RPC methods can be called,
+  preventing potential security issues with undefined or unsafe methods. Any attempt
+  to call undefined methods will result in `{:error, :method_not_found}`.
   """
 
   alias Exiris.Rpc
 
   defmacro __using__(opts) do
-    methods =
+    public_methods =
       for {method, params} <- Rpc.Methods.public_methods() do
         args = Enum.map(params, &Macro.var(&1, nil))
 
@@ -64,7 +79,15 @@ defmodule Exiris.PublicClient do
                   Keyword.get(unquote(opts), :opts, [])
                 )
 
-      unquote(methods)
+      @doc """
+      Executes a JSON-RPC method call through the provider's transport.
+
+      Only requests for methods defined in `Rpc.Methods.public_methods/0` are allowed.
+      Attempting to call undefined methods will return an error.
+      """
+      def call(request), do: Provider.call(@provider, request)
+
+      unquote(public_methods)
     end
   end
 end
