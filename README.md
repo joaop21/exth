@@ -1,7 +1,7 @@
 # Exiris
 
-Exiris (pronounced as "here she is") is a type-safe Elixir client for
-interacting with EVM-compatible blockchain nodes via JSON-RPC.
+Exiris (pronounced as "here she is") is a Elixir client for interacting with
+EVM-compatible blockchain nodes via JSON-RPC.
 
 ## Installation
 
