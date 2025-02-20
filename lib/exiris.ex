@@ -4,7 +4,6 @@ defmodule Exiris do
 
   ## Key Features
 
-  - Type-safe JSON-RPC client
   - Multiple transport options (HTTP, WebSocket, IPC)
   - Auto-generated functions for standard Ethereum methods
   - Built-in request ID management
