@@ -1,6 +1,6 @@
 defmodule Exiris do
   @moduledoc """
-  Exiris is an Elixir library for interacting with EVM-compatible blockchain nodes.
+  Exiris (pronounced "here she is") is an Elixir library for interacting with EVM-compatible blockchain nodes.
 
   ## Key Features
 
