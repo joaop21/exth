@@ -23,10 +23,10 @@ defmodule Exiris.Provider do
 
       # Execute method calls
       {:ok, block_number} = provider
-                           |> Provider.call(Provider.eth_block_number())
+                           |> Provider.call(Rpc.eth_block_number())
 
       {:ok, balance} = provider
-                      |> Provider.call(Provider.eth_get_balance("0x...", "latest"))
+                      |> Provider.call(Rpc.eth_get_balance("0x...", "latest"))
 
   ## Transport Types
 
@@ -84,15 +84,6 @@ defmodule Exiris.Provider do
            provider.transport.request(request, [rpc_url: provider.rpc_url] ++ provider.opts) do
       {:ok, response.result}
     end
-  end
-
-  for {method, params} <- Rpc.Methods.public_methods() do
-    args = Enum.map(params, &Macro.var(&1, __MODULE__))
-
-    @doc """
-    Executes the #{method} JSON-RPC method call.
-    """
-    defdelegate unquote(method)(unquote_splicing(args)), to: Rpc
   end
 
   ###
