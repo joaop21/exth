@@ -55,6 +55,14 @@ defmodule Exiris.Rpc do
     end
   end
 
+  for {method, params} <- Methods.public_methods_for_block_number() do
+    args = Enum.map(params, &Macro.var(&1, __MODULE__))
+
+    def unquote(method)(unquote_splicing(args), tag \\ "latest") do
+      build_request(to_string(unquote(method)), [unquote_splicing(args), tag])
+    end
+  end
+
   ###
   ### Private Functions
   ###

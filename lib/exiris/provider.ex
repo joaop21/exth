@@ -92,6 +92,8 @@ defmodule Exiris.Provider do
 
   @spec public_methods_names() :: [String.t()]
   defp public_methods_names() do
-    Enum.map(Rpc.Methods.public_methods(), fn {method, _params} -> to_string(method) end)
+    Rpc.Methods.public_methods()
+    |> Map.merge(Rpc.Methods.public_methods_for_block_number())
+    |> Enum.map(fn {method, _params} -> to_string(method) end)
   end
 end
