@@ -80,9 +80,19 @@ defmodule Exiris.Provider do
   end
 
   defp do_call(%__MODULE__{} = provider, request) do
-    with {:ok, %Response{} = response} <-
-           provider.transport.request(request, [rpc_url: provider.rpc_url] ++ provider.opts) do
-      {:ok, response.result}
+    opts =
+      [rpc_url: provider.rpc_url] ++
+        provider.opts
+
+    case provider.transport.request(request, opts) do
+      {:ok, %Response{} = response} when not is_nil(response.result) ->
+        {:ok, response.result}
+
+      {:ok, %Response{} = response} ->
+        {:error, response.error}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
