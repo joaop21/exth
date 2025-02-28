@@ -8,7 +8,6 @@ defmodule Exiris.Rpc.Request do
           params: list(String.t())
         }
 
-  @derive Jason.Encoder
   defstruct [
     :id,
     :method,
