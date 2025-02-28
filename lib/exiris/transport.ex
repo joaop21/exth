@@ -9,7 +9,12 @@ defmodule Exiris.Transport do
   @type type :: :http
 
   @type http_opts :: [adapter: Tesla.Client.adapter()]
-  @type opts :: [rpc_url: String.t(), http_opts: http_opts()]
+  @type opts :: [
+          rpc_url: String.t(),
+          encoder: (Request.t() -> String.t()),
+          decoder: (String.t() -> Response.t()),
+          http_opts: http_opts()
+        ]
 
   @callback request(body :: Request.t(), opts :: opts()) :: {:ok, Response.t()} | {:error, any()}
 
