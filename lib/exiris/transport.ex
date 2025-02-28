@@ -8,7 +8,11 @@ defmodule Exiris.Transport do
 
   @type type :: :http
 
-  @type http_opts :: [adapter: Tesla.Client.adapter()]
+  @type http_opts :: [
+          adapter: Tesla.Client.adapter(),
+          headers: Keyword.t(),
+          timeout: non_neg_integer()
+        ]
   @type opts :: [
           rpc_url: String.t(),
           encoder: (Request.t() -> String.t()),
