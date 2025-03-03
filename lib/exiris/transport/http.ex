@@ -1,79 +1,87 @@
 defmodule Exiris.Transport.Http do
   @moduledoc """
-  HTTP transport implementation for Exiris using Tesla.
+  @moduledoc \"""
+  HTTP transport implementation for JSON-RPC requests using Tesla.
 
-  This module implements the `Exiris.Transport` behaviour, providing HTTP communication
-  capabilities for JSON-RPC requests over HTTP/HTTPS.
+  This module implements the `Exiris.Transport.Behaviour`, handling HTTP/HTTPS 
+  communication for JSON-RPC requests. It uses Tesla as the HTTP client with 
+  Mint as the default adapter.
 
-  ## Configuration Options
+  ## Implementation Details
 
-  The following options can be provided when making requests:
+  The transport:
+  * Validates RPC URLs (must be valid HTTP/HTTPS URLs with a host)
+  * Manages HTTP-specific configurations (headers, timeouts, adapters)
+  * Handles request/response lifecycle
+  * Provides consistent error handling
 
-    * `:rpc_url` - (Required) The HTTP/HTTPS URL of the JSON-RPC endpoint
-    * `:encoder` - (Required) A function to encode JSON requests
-    * `:decoder` - (Required) A function to decode JSON responses
-    * `:http_opts` - (Optional) A keyword list of HTTP-specific options:
-      * `:adapter` - The Tesla adapter to use. Defaults to `Tesla.Adapter.Mint`
-      * `:headers` - Additional HTTP headers to send with each request. These will
-        override the default headers if there are conflicts
-      * `:timeout` - Request timeout in milliseconds. Defaults to 30000 (30 seconds)
+  ## HTTP Configuration
+
+  The transport accepts the following HTTP-specific options:
+
+    * `:adapter` - Tesla adapter to use (defaults to `Tesla.Adapter.Mint`)
+    * `:headers` - Additional HTTP headers for requests
+    * `:timeout` - Request timeout in milliseconds (defaults to 30000)
 
   ## Default Headers
 
-  The following headers are included by default in all requests:
-    * `user-agent` - Set to "exiris/VERSION"
-    * `content-type` - Set to "application/json"
+  Every request includes these headers by default:
+    * `content-type: application/json`
+    * `user-agent: exiris/VERSION`
 
-  Custom headers can override these defaults.
-
-  ## Examples
-
-      # Basic usage
-      Http.request(payload, rpc_url: "https://eth-mainnet.example.com")
-
-      # With custom timeout and headers
-      Http.request(payload,
-        rpc_url: "https://eth-mainnet.example.com",
-        http_opts: [
-          timeout: 5000,
-          headers: [
-            {"authorization", "Bearer token"},
-            {"user-agent", "my-app/1.0"}
-          ]
-        ]
-      )
-
-      # With custom JSON encoder/decoder
-      Http.request(payload,
-        rpc_url: "https://eth-mainnet.example.com",
-        encoder: &MyJSON.encode/1,
-        decoder: &MyJSON.decode/1
-      )
+  Custom headers can be provided to override the defaults.
 
   ## Error Handling
 
-  The function will raise an `ArgumentError` if:
-    * The RPC URL is missing
-    * The RPC URL is not a string
-    * The RPC URL doesn't start with http:// or https://
-    * The RPC URL doesn't contain a valid host
+  ### Validation Errors (raises ArgumentError)
+  * Missing RPC URL
+  * Invalid URL format (non-string)
+  * Invalid URL scheme (must be http/https)
+  * Missing host in URL
 
-  For runtime errors, it returns:
-    * `{:ok, response}` - Request succeeded
-    * `{:error, {:http_error, status}}` - HTTP status error
-    * `{:error, reason}` - Other runtime errors (network, timeout, etc)
+  ### Runtime Errors (returns tagged tuples)
+  * `{:ok, response}` - Successful request
+  * `{:error, {:http_error, status}}` - HTTP error response
+  * `{:error, reason}` - Other errors (network, timeout, etc)
+
+  ## Internal Modules
+
+  * `Opts` - Struct defining HTTP-specific configuration options
   """
 
-  @behaviour Exiris.Transport
+  alias Exiris.Transport
+
+  @behaviour Exiris.Transport.Behaviour
+
+  @type opts :: __MODULE__.Opts.t()
 
   @adapter Tesla.Adapter.Mint
   @default_timeout 30_000
   @user_agent "#{Application.spec(:exiris, :description)}/#{Application.spec(:exiris, :vsn)}"
 
+  defmodule Opts do
+    @type t :: %__MODULE__{
+            adapter: Tesla.Client.adapter(),
+            headers: Keyword.t(),
+            timeout: non_neg_integer()
+          }
+
+    defstruct [:adapter, :timeout, headers: []]
+  end
+
   @impl true
-  def request(body, opts) do
-    rpc_url = validate_rpc_url(opts[:rpc_url])
-    client = build_client(rpc_url, opts)
+  def build_opts(opts) do
+    adapter = opts[:adapter] || @adapter
+    headers = opts[:headers] || []
+    timeout = opts[:timeout] || @default_timeout
+
+    %Opts{adapter: adapter, headers: build_headers(headers), timeout: timeout}
+  end
+
+  @impl true
+  def request(%Transport{} = transport, body) do
+    validate_rpc_url(transport.rpc_url)
+    client = build_client(transport)
 
     case Tesla.post(client, "", body) do
       {:ok, %Tesla.Env{status: 200, body: response}} -> {:ok, response}
@@ -101,26 +109,21 @@ defmodule Exiris.Transport.Http do
         - Contain a valid host
       """
     end
-
-    rpc_url
   end
 
   defp valid_uri?(%URI{scheme: scheme, host: host}) do
     scheme in ["http", "https"] and not is_nil(host)
   end
 
-  defp build_client(rpc_url, opts) do
-    http_opts = opts[:http_opts] || []
-    adapter = http_opts[:adapter] || @adapter
-
+  defp build_client(%Transport{opts: %Opts{} = http_opts} = transport) do
     middleware = [
-      {Tesla.Middleware.BaseUrl, rpc_url},
-      {Tesla.Middleware.Headers, build_headers(http_opts[:headers])},
-      {Tesla.Middleware.JSON, encode: opts[:encoder], decode: opts[:decoder]},
-      {Tesla.Middleware.Timeout, timeout: http_opts[:timeout] || @default_timeout}
+      {Tesla.Middleware.BaseUrl, transport.rpc_url},
+      {Tesla.Middleware.Headers, http_opts.headers},
+      {Tesla.Middleware.JSON, encode: transport.encoder, decode: transport.decoder},
+      {Tesla.Middleware.Timeout, timeout: http_opts.timeout}
     ]
 
-    Tesla.client(middleware, adapter)
+    Tesla.client(middleware, http_opts.adapter)
   end
 
   defp build_headers(nil), do: build_headers([])
