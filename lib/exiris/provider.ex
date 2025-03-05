@@ -45,25 +45,24 @@ defmodule Exiris.Provider do
   alias Exiris.Rpc.Response
   alias Exiris.Transport
 
-  defstruct [:transport, :transport_type, :rpc_url, :encoder, :decoder, :opts]
+  defstruct [:transport, :opts]
 
   @type t :: %__MODULE__{
-          transport: module(),
-          transport_type: Transport.type(),
-          rpc_url: String.t(),
-          encoder: (Request.t() -> {:ok, String.t()} | {:error, Exception.t()}),
-          decoder: (String.t() -> {:ok, Response.t()} | {:error, Exception.t()}),
+          transport: Transport.t(),
           opts: keyword()
         }
 
   @spec new(Transport.type(), String.t(), keyword()) :: t()
   def new(transport_type, rpc_url, opts \\ []) do
+    transport_opts =
+      Keyword.merge(opts,
+        rpc_url: rpc_url,
+        encoder: &Rpc.Encoding.encode_request/1,
+        decoder: &Rpc.Encoding.decode_response/1
+      )
+
     %__MODULE__{
-      transport: Transport.get_by_type!(transport_type),
-      transport_type: transport_type,
-      rpc_url: rpc_url,
-      encoder: &Rpc.Encoding.encode_request/1,
-      decoder: &Rpc.Encoding.decode_response/1,
+      transport: Transport.new(transport_type, transport_opts),
       opts: opts
     }
   end
@@ -84,11 +83,7 @@ defmodule Exiris.Provider do
   end
 
   defp do_call(%__MODULE__{} = provider, request) do
-    opts =
-      [rpc_url: provider.rpc_url, encoder: provider.encoder, decoder: provider.decoder] ++
-        provider.opts
-
-    case provider.transport.request(request, opts) do
+    case Transport.request(provider.transport, request) do
       {:ok, %Response{} = response} when not is_nil(response.result) ->
         {:ok, response.result}
 
