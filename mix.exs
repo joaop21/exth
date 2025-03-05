@@ -7,7 +7,13 @@ defmodule Exth.MixProject do
       version: "0.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+
+      # Docs
+      name: "Exiris",
+      source_url: "https://github.com/joaop21/exiris",
+      # homepage_url: "http://YOUR_PROJECT_HOMEPAGE",
+      docs: docs()
     ]
   end
 
@@ -20,9 +26,19 @@ defmodule Exth.MixProject do
 
   defp deps do
     [
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:jason, "~> 1.4"},
       {:mint, "~> 1.7", only: :dev},
       {:tesla, "~> 1.14"}
+    ]
+  end
+
+  defp docs do
+    [
+      # The main page in the docs
+      main: "readme",
+      # logo: "path/to/logo.png",
+      extras: ["README.md"]
     ]
   end
 end
