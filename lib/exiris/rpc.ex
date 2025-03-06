@@ -34,41 +34,17 @@ defmodule Exiris.Rpc do
   alias Exiris.RequestCounter
   alias __MODULE__.Methods
   alias __MODULE__.Request
-  alias __MODULE__.Response
 
   @type id :: pos_integer()
   @type jsonrpc :: String.t()
   @type method :: String.t()
   @type params :: list(binary())
 
-  @spec parse_response(id(), jsonrpc(), map() | term()) :: Response.t()
-  defdelegate parse_response(id, jsonrpc, result), to: Response, as: :new
-
-  @spec public_methods() :: %{atom() => list(atom())}
-  defdelegate public_methods, to: Methods
-
-  for {method, params} <- Methods.public_methods() do
-    args = Enum.map(params, &Macro.var(&1, __MODULE__))
-
-    def unquote(method)(unquote_splicing(args)) do
-      build_request(to_string(unquote(method)), [unquote_splicing(args)])
-    end
+  @spec build_request(method(), params(), id()) :: Request.t()
+  def build_request(method, params, id \\ RequestCounter.next()) do
+    Request.new(method, params, id)
   end
 
-  for {method, params} <- Methods.public_methods_for_block_number() do
-    args = Enum.map(params, &Macro.var(&1, __MODULE__))
-
-    def unquote(method)(unquote_splicing(args), tag \\ "latest") do
-      build_request(to_string(unquote(method)), [unquote_splicing(args), tag])
-    end
-  end
-
-  ###
-  ### Private Functions
-  ###
-
-  @spec build_request(method(), params()) :: Request.t()
-  defp build_request(method, params) do
-    Request.new(method, params, RequestCounter.next())
-  end
+  @spec methods() :: %{atom() => {atom(), list(atom()), boolean()}}
+  defdelegate methods, to: Methods
 end

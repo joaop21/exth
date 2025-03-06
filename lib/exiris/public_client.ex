@@ -52,58 +52,58 @@ defmodule Exiris.PublicClient do
   to call undefined methods will result in `{:error, :method_not_found}`.
   """
 
-  alias Exiris.Rpc
-
-  defmacro __using__(opts) do
-    public_methods =
-      for {method, params} <- Rpc.Methods.public_methods() do
-        args = Enum.map(params, &Macro.var(&1, nil))
-
-        quote do
-          @doc """
-          Executes the #{unquote(method)} JSON-RPC method call.
-          """
-          def unquote(method)(unquote_splicing(args)) do
-            request = apply(Rpc, unquote(method), [unquote_splicing(args)])
-            Provider.call(@provider, request)
-          end
-        end
-      end
-
-    default_block_number_public_methods =
-      for {method, params} <- Rpc.Methods.public_methods_for_block_number() do
-        args = Enum.map(params, &Macro.var(&1, nil))
-
-        quote do
-          @doc """
-          Executes the #{unquote(method)} JSON-RPC method call.
-          """
-          def unquote(method)(unquote_splicing(args), tag \\ "latest") do
-            request = apply(Rpc, unquote(method), [unquote_splicing(args), tag])
-            Provider.call(@provider, request)
-          end
-        end
-      end
-
-    quote do
-      alias Exiris.{Provider, Rpc}
-
-      @provider Provider.new(
-                  Keyword.fetch!(unquote(opts), :transport_type),
-                  Keyword.fetch!(unquote(opts), :rpc_url),
-                  Keyword.get(unquote(opts), :opts, [])
-                )
-
-      @doc """
-      Executes a JSON-RPC method call through the provider's transport.
-
-      Only requests for methods defined in `Rpc.Methods.public_methods/0` are allowed.
-      Attempting to call undefined methods will return an error.
-      """
-      def call(request), do: Provider.call(@provider, request)
-
-      unquote(public_methods)
-      unquote(default_block_number_public_methods)
-    end
-  end
+  # alias Exiris.Rpc
+  #
+  # defmacro __using__(opts) do
+  #   public_methods =
+  #     for {method, params} <- Rpc.Methods.public_methods() do
+  #       args = Enum.map(params, &Macro.var(&1, nil))
+  #
+  #       quote do
+  #         @doc """
+  #         Executes the #{unquote(method)} JSON-RPC method call.
+  #         """
+  #         def unquote(method)(unquote_splicing(args)) do
+  #           request = apply(Rpc, unquote(method), [unquote_splicing(args)])
+  #           Provider.call(@provider, request)
+  #         end
+  #       end
+  #     end
+  #
+  #   default_block_number_public_methods =
+  #     for {method, params} <- Rpc.Methods.public_methods_for_block_number() do
+  #       args = Enum.map(params, &Macro.var(&1, nil))
+  #
+  #       quote do
+  #         @doc """
+  #         Executes the #{unquote(method)} JSON-RPC method call.
+  #         """
+  #         def unquote(method)(unquote_splicing(args), tag \\ "latest") do
+  #           request = apply(Rpc, unquote(method), [unquote_splicing(args), tag])
+  #           Provider.call(@provider, request)
+  #         end
+  #       end
+  #     end
+  #
+  #   quote do
+  #     alias Exiris.{Provider, Rpc}
+  #
+  #     @provider Provider.new(
+  #                 Keyword.fetch!(unquote(opts), :transport_type),
+  #                 Keyword.fetch!(unquote(opts), :rpc_url),
+  #                 Keyword.get(unquote(opts), :opts, [])
+  #               )
+  #
+  #     @doc """
+  #     Executes a JSON-RPC method call through the provider's transport.
+  #
+  #     Only requests for methods defined in `Rpc.Methods.public_methods/0` are allowed.
+  #     Attempting to call undefined methods will return an error.
+  #     """
+  #     def call(request), do: Provider.call(@provider, request)
+  #
+  #     unquote(public_methods)
+  #     unquote(default_block_number_public_methods)
+  #   end
+  # end
 end
