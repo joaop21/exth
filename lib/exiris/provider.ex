@@ -41,8 +41,8 @@ defmodule Exiris.Provider do
   """
 
   alias Exiris.Rpc
-  alias Exiris.Rpc.Request
-  alias Exiris.Rpc.Response
+  alias Exiris.Rpc.JsonRpc.Request
+  alias Exiris.Rpc.JsonRpc.Response
   alias Exiris.Transport
 
   defstruct [:transport, :opts]
@@ -102,10 +102,10 @@ defmodule Exiris.Provider do
   """
   def request(%__MODULE__{} = provider, %Request{} = request) do
     case Transport.request(provider.transport, request) do
-      {:ok, %Response{} = response} when not is_nil(response.result) ->
+      {:ok, %Response.Success{} = response} ->
         {:ok, response.result}
 
-      {:ok, %Response{} = response} ->
+      {:ok, %Response.Error{} = response} ->
         {:error, response.error}
 
       {:error, reason} ->
