@@ -1,4 +1,7 @@
 defmodule Exiris.Rpc.JsonRpc do
+  @moduledoc """
+  JSON-RPC data types
+  """
   @type id :: pos_integer()
   @type jsonrpc :: String.t()
   @type method :: String.t()
