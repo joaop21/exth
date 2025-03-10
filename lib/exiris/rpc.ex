@@ -33,7 +33,7 @@ defmodule Exiris.Rpc do
 
   alias Exiris.RequestCounter
   alias __MODULE__.Methods
-  alias __MODULE__.Request
+  alias __MODULE__.JsonRpc.Request
 
   @type id :: pos_integer()
   @type jsonrpc :: String.t()
