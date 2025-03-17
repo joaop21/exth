@@ -18,6 +18,8 @@ defmodule Exiris.Transport.Http do
       {:ok, response} = Transportable.call(transport, request)
   """
 
+  alias Exiris.Rpc.JsonRpc.Request
+
   @typedoc "HTTP transport configuration"
   @type t :: %__MODULE__{
           client: Tesla.Client.t()
@@ -38,7 +40,7 @@ defmodule Exiris.Transport.Http do
     * `{:error, reason}` - Other errors (network, timeout, etc)
   """
   @spec call(t(), term()) :: {:ok, term()} | {:error, term()}
-  def call(%__MODULE__{client: client}, request) do
+  def call(%__MODULE__{client: client}, %Request{} = request) do
     case Tesla.post(client, "", request) do
       {:ok, %Tesla.Env{status: 200, body: response}} -> {:ok, response}
       {:ok, %Tesla.Env{status: status}} -> {:error, {:http_error, status}}

@@ -31,6 +31,9 @@ defprotocol Exiris.Transport.Transportable do
       {:ok, response} = Transportable.call(transport, request)
   """
 
+  alias Exiris.Rpc.JsonRpc.Request
+  alias Exiris.Rpc.JsonRpc.Response
+
   @doc """
   Creates a new transport instance with the given options.
 
@@ -69,6 +72,6 @@ defprotocol Exiris.Transport.Transportable do
         id: 1
       })
   """
-  @spec call(t, term()) :: {:ok, term()} | {:error, term()}
+  @spec call(t, Request.t()) :: {:ok, Response.t()} | {:error, Exception.t()}
   def call(transport, request)
 end
