@@ -44,11 +44,12 @@ defmodule Exiris.Provider do
   alias Exiris.Rpc.JsonRpc.Request
   alias Exiris.Rpc.JsonRpc.Response
   alias Exiris.Transport
+  alias Exiris.Transport.Transportable
 
   defstruct [:transport, :opts]
 
   @type t :: %__MODULE__{
-          transport: Transport.t(),
+          transport: Transportable.t(),
           opts: keyword()
         }
 
@@ -101,7 +102,7 @@ defmodule Exiris.Provider do
   Executes a JSON-RPC method request through the provider's transport.
   """
   def request(%__MODULE__{} = provider, %Request{} = request) do
-    case Transport.request(provider.transport, request) do
+    case Transport.call(provider.transport, request) do
       {:ok, %Response.Success{} = response} ->
         {:ok, response.result}
 
