@@ -1,5 +1,6 @@
 defmodule Exiris.Rpc.Client do
   alias Exiris.Transport
+  alias Exiris.Rpc.Encoding
   alias Exiris.Rpc.JsonRpc.Request
   alias Exiris.Transport.Transportable
 
@@ -14,6 +15,7 @@ defmodule Exiris.Rpc.Client do
 
   @spec new(Transport.type(), keyword()) :: t()
   def new(type, opts) when type in @transport_types do
+    opts = build_opts(opts)
     transport = Transport.new(type, opts)
 
     %__MODULE__{
@@ -27,8 +29,16 @@ defmodule Exiris.Rpc.Client do
     Request.new(method, params, id)
   end
 
-  def send_request(%__MODULE__{} = client, request) do
-    serialized_request = Request.serialize(request)
-    Transport.call(client.transport, serialized_request)
+  def send(%__MODULE__{} = client, %Request{} = request) do
+    Transport.call(client.transport, request)
+  end
+
+  defp build_opts(opts) do
+    encoder = &Encoding.encode_request/1
+    decoder = &Encoding.decode_response/1
+
+    base_opts = Keyword.new(encoder: encoder, decoder: decoder)
+
+    Keyword.merge(base_opts, opts)
   end
 end
