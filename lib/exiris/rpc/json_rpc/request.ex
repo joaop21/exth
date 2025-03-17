@@ -1,7 +1,5 @@
 defmodule Exiris.Rpc.JsonRpc.Request do
-  alias Exiris.Rpc.Encoding
   alias Exiris.Rpc.JsonRpc
-  alias Exiris.Rpc.JsonRpc.SerializedRequest
 
   @type t :: %__MODULE__{
           id: JsonRpc.id(),
@@ -23,15 +21,5 @@ defmodule Exiris.Rpc.JsonRpc.Request do
       params: params,
       id: id
     }
-  end
-
-  def serialize(%__MODULE__{} = request) do
-    with {:ok, request} <- Encoding.encode_request(request) do
-      %SerializedRequest{
-        id: request.id,
-        method: request.method,
-        request: request
-      }
-    end
   end
 end
