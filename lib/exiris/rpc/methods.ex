@@ -72,6 +72,11 @@ defmodule Exiris.Rpc.Methods do
     call: {:eth_call, [:transaction], true}
   }
 
+  @rpc_method_names @rpc_methods |> Map.values() |> Enum.map(&elem(&1, 0))
+
   @spec methods() :: %{atom() => {atom(), list(atom()), boolean()}}
   def methods, do: @rpc_methods
+
+  @spec method_names() :: list(atom())
+  def method_names, do: @rpc_method_names
 end

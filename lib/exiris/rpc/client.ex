@@ -24,7 +24,8 @@ defmodule Exiris.Rpc.Client do
     }
   end
 
-  def request(%__MODULE__{} = client, method, params) do
+  def request(%__MODULE__{} = client, method, params)
+      when is_binary(method) or is_atom(method) do
     id = :atomics.add_get(client.counter, 1, 1)
     Request.new(method, params, id)
   end
