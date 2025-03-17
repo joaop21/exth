@@ -1,109 +1,167 @@
 defmodule Exiris.Transport do
   @moduledoc """
-  Manages transport configurations and implementations for JSON-RPC communication.
+  Factory module for creating JSON-RPC transport implementations.
 
-  The Transport module serves as a factory and coordinator for different transport
-  implementations (HTTP, WebSocket, IPC). It provides:
+  This module provides a simple interface for creating and using different transport
+  implementations (HTTP, WebSocket, IPC) through the `Transportable` protocol.
 
-  * A consistent interface for building transport configurations
-  * Type definitions for transport implementations
-  * Factory functions for creating transport instances
-  * Delegation of requests to specific transport implementations
+  ## Quick Start
+
+      # Create an HTTP transport
+      transport = Transport.new(:http,
+        rpc_url: "https://eth-mainnet.example.com",
+        encoder: &encode_request!/1,
+        decoder: &decode_request!/1
+      )
+
+      # Make a JSON-RPC request
+      {:ok, response} = Transport.call(transport, %{
+        jsonrpc: "2.0",
+        method: "eth_blockNumber",
+        params: [],
+        id: 1
+      })
 
   ## Transport Types
 
   Currently supported transport types:
 
   * `:http` - HTTP/HTTPS transport using `Exiris.Transport.Http`
-  * `:custom` - Custom transport implementation provided via `:module` option
+  * `:custom` - Custom transport implementation (requires `:module` option)
 
-  ## Configuration
+  ## Configuration Options
 
-  Transport configuration includes:
+  Common options for all transports:
 
   * `:rpc_url` - (Required) The endpoint URL for the transport
-  * `:encoder` - Function to encode Request structs to JSON string
-  * `:decoder` - Function to decode JSON string to Response structs
-  * `:type` - Type of transport (`:http` or `:custom`)
-  * `:module` - (Required for `:custom`) The module implementing the transport
-  * `:opts` - Transport-specific options passed to the implementation
+  * `:encoder` - (Required) Function to encode requests
+  * `:decoder` - (Required) Function to decode responses
 
-  ## Examples
+  HTTP-specific options:
 
-      # Create an HTTP transport
-      transport = Transport.new(:http,
-        rpc_url: "https://eth-mainnet.example.com",
-        encoder: &JSON.encode/1,
-        decoder: &JSON.decode/1
-      )
+  * `:headers` - Additional HTTP headers for requests
+  * `:timeout` - Request timeout in milliseconds (default: 30000)
+  * `:adapter` - Tesla adapter to use (default: `Tesla.Adapter.Mint`)
 
-      # Create a custom transport
-      transport = Transport.new(:custom,
-        module: MyCustomTransport,
-        rpc_url: "custom://endpoint",
-        opts: [custom_option: "value"]
-      )
+  Custom transport options:
 
-      # Make a request using the transport
-      Transport.request(transport, request_body)
+  * `:module` - (Required) Module implementing the `Transportable` protocol
+  * Additional options specific to the custom implementation
 
-  ## Custom Transports
+  ## Custom Transport Implementation
 
-  To implement a custom transport:
+  To create a custom transport:
 
-  1. Create a module that implements the `Exiris.Transport.Behaviour`
-  2. Implement the required callbacks:
-     * `build_opts/1` - Build transport-specific options
-     * `request/2` - Handle the actual request/response cycle
+  1. Define a struct for your transport configuration
+  2. Implement the `Transportable` protocol for your struct
 
   Example:
 
-      defmodule MyCustomTransport do
-        @behaviour Exiris.Transport.Behaviour
+      defmodule MyTransport do
+        defstruct [:config]
 
-        def build_opts(opts) do
-          # Transform raw options into transport config
-          %{custom_config: opts}
-        end
+        defimpl Exiris.Transport.Transportable do
+          def new(_transport, opts) do
+            %MyTransport{config: opts}
+          end
 
-        def request(transport, body) do
-          # Implement request handling
-          {:ok, response}
+          def call(transport, request) do
+            # Implement request handling
+            {:ok, response}
+          end
         end
       end
+
+      # Use your custom transport
+      transport = Transport.new(:custom,
+        module: MyTransport,
+        rpc_url: "custom://endpoint"
+      )
 
   ## Error Handling
 
   The module will raise `ArgumentError` when:
-  * Required `:rpc_url` option is missing
   * Invalid transport type is specified
   * `:module` option is missing for custom transports
 
-  Runtime errors are handled by specific transport implementations.
+  Runtime errors are returned as tagged tuples:
+  * `{:ok, response}` - Successful request with decoded response
+  * `{:error, reason}` - Request failed with error reason
   """
 
   alias __MODULE__.Transportable
+  alias Exiris.Rpc.JsonRpc.Request
+  alias Exiris.Rpc.JsonRpc.Response
 
+  @typedoc """
+  Supported transport types:
+  * `:http` - HTTP/HTTPS transport
+  * `:custom` - Custom transport implementation
+  """
   @type type :: :custom | :http
 
-  ### 
-  ### Public Functions
-  ###
+  @typedoc """
+  Transport configuration options.
+  """
+  @type options :: [
+          rpc_url: String.t(),
+          encoder: (term -> String.t()),
+          decoder: (String.t() -> term),
+          module: module() | nil
+        ]
 
-  @spec new(type(), keyword()) :: Transportable.t()
+  @doc """
+  Creates a new transport struct with the given type and options.
+
+  ## Parameters
+    * `type` - The type of transport to create (`:http` or `:custom`)
+    * `opts` - Configuration options for the transport
+
+  ## Returns
+    * A configured transport struct implementing the `Transportable` protocol
+
+  ## Raises
+    * `ArgumentError` if required options are missing or type is invalid
+  """
+  @spec new(type(), options()) :: Transportable.t()
   def new(type, opts) do
-    module =
-      case type do
-        :http -> __MODULE__.Http
-        :custom -> opts[:module] || raise ArgumentError, "missing required option :module"
-        _ -> raise(ArgumentError, "invalid transport type: #{inspect(type)}")
-      end
+    validate_opts(opts)
 
+    module = get_transport_module(type, opts)
     transport = struct(module, %{})
 
     Transportable.new(transport, opts)
   end
 
-  @spec call(Transportable.t(), term()) :: {:ok, term()} | {:error, term()}
+  defp validate_opts(opts) do
+    opts[:rpc_url] || raise ArgumentError, "missing required option :rpc_url"
+    opts[:encoder] || raise ArgumentError, "missing required option :encoder"
+    opts[:decoder] || raise ArgumentError, "missing required option :decoder"
+  end
+
+  defp get_transport_module(:http, _opts), do: __MODULE__.Http
+
+  defp get_transport_module(:custom, opts) do
+    opts[:module] || raise ArgumentError, "missing required option :module"
+  end
+
+  defp get_transport_module(type, _opts) do
+    raise(ArgumentError, "invalid transport type: #{inspect(type)}")
+  end
+
+  @type error_reason :: Exception.t() | String.t() | term()
+
+  @doc """
+  Makes a request using the configured transport.
+
+  ## Parameters
+    * `transportable` - The configured transport instance
+    * `request` - The JSON-RPC request to send
+
+  ## Returns
+    * `{:ok, response}` - Successful request with decoded response
+    * `{:error, reason}` - Request failed with error reason
+  """
+  @spec call(Transportable.t(), Request.t()) :: {:ok, Response.t()} | {:error, error_reason()}
   def call(transportable, request), do: Transportable.call(transportable, request)
 end

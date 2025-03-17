@@ -18,6 +18,8 @@ defmodule Exiris.Transport.Http do
       {:ok, response} = Transportable.call(transport, request)
   """
 
+  alias Exiris.Rpc.JsonRpc.Request
+
   @typedoc "HTTP transport configuration"
   @type t :: %__MODULE__{
           client: Tesla.Client.t()
@@ -38,7 +40,7 @@ defmodule Exiris.Transport.Http do
     * `{:error, reason}` - Other errors (network, timeout, etc)
   """
   @spec call(t(), term()) :: {:ok, term()} | {:error, term()}
-  def call(%__MODULE__{client: client}, request) do
+  def call(%__MODULE__{client: client}, %Request{} = request) do
     case Tesla.post(client, "", request) do
       {:ok, %Tesla.Env{status: 200, body: response}} -> {:ok, response}
       {:ok, %Tesla.Env{status: status}} -> {:error, {:http_error, status}}
@@ -51,16 +53,18 @@ defmodule Exiris.Transport.Http do
 
   ## Options
     * `:rpc_url` - (required) The HTTP/HTTPS endpoint URL
+    * `:encoder` - (required) Function to encode requests
+    * `:decoder` - (required) Function to decode responses
     * `:adapter` - Tesla adapter to use (defaults to `Tesla.Adapter.Mint`)
     * `:headers` - Additional HTTP headers for requests
     * `:timeout` - Request timeout in milliseconds (defaults to 30000)
-    * `:encoder` - Function to encode requests (e.g., `&Jason.encode!/1`)
-    * `:decoder` - Function to decode responses (e.g., `&Jason.decode!/1`)
   """
   @spec new(keyword()) :: t()
   def new(opts) do
     with {:ok, rpc_url} <- validate_required_url(opts[:rpc_url]),
-         :ok <- validate_url_format(rpc_url) do
+         :ok <- validate_url_format(rpc_url),
+         :ok <- validate_required_encoder(opts[:encoder]),
+         :ok <- validate_required_decoder(opts[:decoder]) do
       build_client(opts, rpc_url)
     end
   end
@@ -114,6 +118,31 @@ defmodule Exiris.Transport.Http do
           - Contain a valid host
         """
     end
+  end
+
+  defp validate_required_encoder(nil) do
+    raise ArgumentError, "encoder function is required but was not provided"
+  end
+
+  defp validate_required_encoder(encoder) when is_function(encoder, 1), do: :ok
+
+  defp validate_required_encoder(encoder) do
+    raise ArgumentError,
+          "Invalid encoder: expected a function that takes 1 argument, got: #{inspect(encoder)}"
+  end
+
+  defp validate_required_decoder(nil) do
+    raise ArgumentError, "decoder function is required but was not provided"
+  end
+
+  defp validate_required_decoder(decoder) when is_function(decoder, 1), do: :ok
+
+  defp validate_required_decoder(decoder) do
+    raise ArgumentError, """
+    Invalid decoder: expected a function that takes 1 argument, got: #{inspect(decoder)}
+    The decoder must be a function that accepts a JSON string and returns a term.
+    Example: &Jason.decode!/1
+    """
   end
 
   defp build_headers(nil), do: build_headers([])
