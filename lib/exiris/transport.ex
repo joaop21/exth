@@ -85,26 +85,6 @@ defmodule Exiris.Transport do
   alias __MODULE__.Transportable
 
   @type type :: :custom | :http
-  # @type encoder :: (Request.t() -> String.t())
-  # @type decoder :: (String.t() -> Response.t())
-  #
-  # @type t :: %__MODULE__{
-  #         decoder: encoder(),
-  #         encoder: decoder(),
-  #         module: __MODULE__.Behaviour.t(),
-  #         opts: Http.opts() | map(),
-  #         rpc_url: String.t(),
-  #         type: type()
-  #       }
-  #
-  # defstruct [
-  #   :rpc_url,
-  #   :encoder,
-  #   :decoder,
-  #   :module,
-  #   :opts,
-  #   :type
-  # ]
 
   ### 
   ### Public Functions
