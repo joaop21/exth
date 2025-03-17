@@ -6,6 +6,7 @@ defmodule Exiris.Rpc.JsonRpc do
   @type jsonrpc :: String.t()
   @type method :: String.t()
   @type params :: list(binary())
+  @type request :: String.t()
 
   @jsonrpc_version "2.0"
 
