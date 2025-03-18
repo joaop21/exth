@@ -41,8 +41,8 @@ defmodule Exiris.Provider do
   """
 
   alias Exiris.Rpc
-  alias Exiris.Rpc.JsonRpc.Request
-  alias Exiris.Rpc.JsonRpc.Response
+  alias Exiris.Rpc.Request
+  alias Exiris.Rpc.Response
   alias Exiris.Transport
   alias Exiris.Transport.Transportable
 
@@ -53,7 +53,7 @@ defmodule Exiris.Provider do
           opts: keyword()
         }
 
-  @default_block_tag "latest"
+  # @default_block_tag "latest"
 
   @spec new(Transport.type(), String.t(), keyword()) :: t()
   def new(transport_type, rpc_url, opts \\ []) do
@@ -70,33 +70,33 @@ defmodule Exiris.Provider do
     }
   end
 
-  for {method_name, {rpc_method, param_types, accepts_block}} <- Rpc.methods() do
-    param_vars = Enum.map(param_types, &Macro.var(&1, __MODULE__))
-    method_params = Enum.map_join(param_types, ", ", &":#{&1}")
-
-    {function_params, request_params} =
-      if accepts_block do
-        block_param = Macro.var(:block_tag, __MODULE__)
-        function_params = param_vars ++ [{:\\, [], [block_param, @default_block_tag]}]
-        request_params = param_vars ++ [block_param]
-        {function_params, request_params}
-      else
-        {param_vars, param_vars}
-      end
-
-    @doc """
-    Generates a JSON-RPC request for the #{rpc_method} method.
-
-    #{if length(param_vars) > 0, do: "Parameters: #{method_params}#{if accepts_block, do: ~S(, :block_tag \\\\ ) <> @default_block_tag}", else: ""}
-    """
-    @spec unquote(method_name)(
-            unquote_splicing(List.duplicate({:term, [], []}, length(function_params)))
-          ) ::
-            Request.t()
-    def unquote(method_name)(unquote_splicing(function_params)) do
-      Rpc.build_request(to_string(unquote(rpc_method)), [unquote_splicing(request_params)])
-    end
-  end
+  # for {method_name, {rpc_method, param_types, accepts_block}} <- Rpc.methods() do
+  #   param_vars = Enum.map(param_types, &Macro.var(&1, __MODULE__))
+  #   method_params = Enum.map_join(param_types, ", ", &":#{&1}")
+  #
+  #   {function_params, request_params} =
+  #     if accepts_block do
+  #       block_param = Macro.var(:block_tag, __MODULE__)
+  #       function_params = param_vars ++ [{:\\, [], [block_param, @default_block_tag]}]
+  #       request_params = param_vars ++ [block_param]
+  #       {function_params, request_params}
+  #     else
+  #       {param_vars, param_vars}
+  #     end
+  #
+  #   @doc """
+  #   Generates a JSON-RPC request for the #{rpc_method} method.
+  #
+  #   #{if length(param_vars) > 0, do: "Parameters: #{method_params}#{if accepts_block, do: ~S(, :block_tag \\\\ ) <> @default_block_tag}", else: ""}
+  #   """
+  #   @spec unquote(method_name)(
+  #           unquote_splicing(List.duplicate({:term, [], []}, length(function_params)))
+  #         ) ::
+  #           Request.t()
+  #   def unquote(method_name)(unquote_splicing(function_params)) do
+  #     Rpc.build_request(to_string(unquote(rpc_method)), [unquote_splicing(request_params)])
+  #   end
+  # end
 
   @doc """
   Executes a JSON-RPC method request through the provider's transport.
