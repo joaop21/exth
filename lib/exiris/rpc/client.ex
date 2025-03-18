@@ -1,7 +1,9 @@
 defmodule Exiris.Rpc.Client do
   alias Exiris.Transport
+  alias Exiris.Rpc
   alias Exiris.Rpc.Encoding
-  alias Exiris.Rpc.JsonRpc.Request
+  alias Exiris.Rpc.Request
+  alias Exiris.Rpc.Response
   alias Exiris.Transport.Transportable
 
   @transport_types [:http, :custom]
@@ -24,16 +26,6 @@ defmodule Exiris.Rpc.Client do
     }
   end
 
-  def request(%__MODULE__{} = client, method, params)
-      when is_binary(method) or is_atom(method) do
-    id = :atomics.add_get(client.counter, 1, 1)
-    Request.new(method, params, id)
-  end
-
-  def send(%__MODULE__{} = client, %Request{} = request) do
-    Transport.call(client.transport, request)
-  end
-
   defp build_opts(opts) do
     encoder = &Encoding.encode_request/1
     decoder = &Encoding.decode_response/1
@@ -41,5 +33,17 @@ defmodule Exiris.Rpc.Client do
     base_opts = Keyword.new(encoder: encoder, decoder: decoder)
 
     Keyword.merge(base_opts, opts)
+  end
+
+  @spec request(t(), Rpc.method(), Rpc.params()) :: Request.t()
+  def request(%__MODULE__{} = client, method, params)
+      when is_binary(method) or is_atom(method) do
+    id = :atomics.add_get(client.counter, 1, 1)
+    Request.new(method, params, id)
+  end
+
+  @spec send(t(), Request.t()) :: {:ok, Response.t()} | {:error, Exception.t()}
+  def send(%__MODULE__{} = client, %Request{} = request) do
+    Transport.call(client.transport, request)
   end
 end
