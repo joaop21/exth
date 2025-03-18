@@ -40,36 +40,36 @@ defmodule Exiris.Provider do
   the provider. See `Exiris.Transport` for details on available options.
   """
 
-  alias Exiris.Rpc
-  alias Exiris.Rpc.Request
-  alias Exiris.Rpc.Response
-  alias Exiris.Transport
-  alias Exiris.Transport.Transportable
-
-  defstruct [:transport, :opts]
-
-  @type t :: %__MODULE__{
-          transport: Transportable.t(),
-          opts: keyword()
-        }
-
+  # alias Exiris.Rpc
+  # alias Exiris.Rpc.Request
+  # alias Exiris.Rpc.Response
+  # alias Exiris.Transport
+  # alias Exiris.Transport.Transportable
+  #
+  # defstruct [:transport, :opts]
+  #
+  # @type t :: %__MODULE__{
+  #         transport: Transportable.t(),
+  #         opts: keyword()
+  #       }
+  #
   # @default_block_tag "latest"
-
-  @spec new(Transport.type(), String.t(), keyword()) :: t()
-  def new(transport_type, rpc_url, opts \\ []) do
-    transport_opts =
-      Keyword.merge(opts,
-        rpc_url: rpc_url,
-        encoder: &Rpc.Encoding.encode_request/1,
-        decoder: &Rpc.Encoding.decode_response/1
-      )
-
-    %__MODULE__{
-      transport: Transport.new(transport_type, transport_opts),
-      opts: opts
-    }
-  end
-
+  #
+  # @spec new(Transport.type(), String.t(), keyword()) :: t()
+  # def new(transport_type, rpc_url, opts \\ []) do
+  #   transport_opts =
+  #     Keyword.merge(opts,
+  #       rpc_url: rpc_url,
+  #       encoder: &Rpc.Encoding.encode_request/1,
+  #       decoder: &Rpc.Encoding.decode_response/1
+  #     )
+  #
+  #   %__MODULE__{
+  #     transport: Transport.new(transport_type, transport_opts),
+  #     opts: opts
+  #   }
+  # end
+  #
   # for {method_name, {rpc_method, param_types, accepts_block}} <- Rpc.methods() do
   #   param_vars = Enum.map(param_types, &Macro.var(&1, __MODULE__))
   #   method_params = Enum.map_join(param_types, ", ", &":#{&1}")
@@ -97,20 +97,20 @@ defmodule Exiris.Provider do
   #     Rpc.build_request(to_string(unquote(rpc_method)), [unquote_splicing(request_params)])
   #   end
   # end
-
-  @doc """
-  Executes a JSON-RPC method request through the provider's transport.
-  """
-  def request(%__MODULE__{} = provider, %Request{} = request) do
-    case Transport.call(provider.transport, request) do
-      {:ok, %Response.Success{} = response} ->
-        {:ok, response.result}
-
-      {:ok, %Response.Error{} = response} ->
-        {:error, response.error}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
+  #
+  # @doc """
+  # Executes a JSON-RPC method request through the provider's transport.
+  # """
+  # def request(%__MODULE__{} = provider, %Request{} = request) do
+  #   case Transport.call(provider.transport, request) do
+  #     {:ok, %Response.Success{} = response} ->
+  #       {:ok, response.result}
+  #
+  #     {:ok, %Response.Error{} = response} ->
+  #       {:error, response.error}
+  #
+  #     {:error, reason} ->
+  #       {:error, reason}
+  #   end
+  # end
 end
