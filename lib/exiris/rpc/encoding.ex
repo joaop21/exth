@@ -3,8 +3,8 @@ defmodule Exiris.Rpc.Encoding do
   Handles encoding and decoding of JSON-RPC requests and responses.
   """
 
-  alias Exiris.Rpc.JsonRpc.Response
-  alias Exiris.Rpc.JsonRpc.Request
+  alias Exiris.Rpc.Response
+  alias Exiris.Rpc.Request
 
   @spec encode_request(Request.t()) :: {:ok, String.t()} | {:error, Exception.t()}
   def encode_request(%Request{} = request) do

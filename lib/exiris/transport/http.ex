@@ -18,7 +18,7 @@ defmodule Exiris.Transport.Http do
       {:ok, response} = Transportable.call(transport, request)
   """
 
-  alias Exiris.Rpc.JsonRpc.Request
+  alias Exiris.Rpc.Request
 
   @typedoc "HTTP transport configuration"
   @type t :: %__MODULE__{
