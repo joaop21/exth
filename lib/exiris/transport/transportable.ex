@@ -31,8 +31,8 @@ defprotocol Exiris.Transport.Transportable do
       {:ok, response} = Transportable.call(transport, request)
   """
 
-  alias Exiris.Rpc.JsonRpc.Request
-  alias Exiris.Rpc.JsonRpc.Response
+  alias Exiris.Rpc.Request
+  alias Exiris.Rpc.Response
 
   @doc """
   Creates a new transport instance with the given options.

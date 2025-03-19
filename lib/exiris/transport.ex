@@ -90,8 +90,8 @@ defmodule Exiris.Transport do
   """
 
   alias __MODULE__.Transportable
-  alias Exiris.Rpc.JsonRpc.Request
-  alias Exiris.Rpc.JsonRpc.Response
+  alias Exiris.Rpc.Request
+  alias Exiris.Rpc.Response
 
   @typedoc """
   Supported transport types:
