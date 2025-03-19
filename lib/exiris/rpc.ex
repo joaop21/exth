@@ -1,50 +1,85 @@
 defmodule Exiris.Rpc do
   @moduledoc """
-  Handles JSON-RPC communication with EVM-compatible blockchain nodes.
+  Core module for making JSON-RPC requests to EVM-compatible blockchain nodes.
 
-  This module provides:
-    * Auto-generated functions for all standard EVM JSON-RPC methods
-    * Request building and response parsing
-    * Automatic request ID generation and tracking
-    * Type safety for request/response handling
+  Provides a simple interface for creating clients, building requests, and handling
+  responses using different transport options.
 
-  ## Examples
+  ## Quick Start
 
-      iex> Exiris.Rpc.eth_block_number()
-      %Exiris.Rpc.Request{
-        jsonrpc: "2.0",
-        method: "eth_blockNumber",
-        params: [],
-        id: 1
-      }
+      client = Rpc.new_client(:http, rpc_url: "https://eth-mainnet.example.com")
 
-      iex> Exiris.Rpc.eth_get_balance("0x742d35Cc6634C0532925a3b844Bc454e4438f44e", "latest")
-      %Exiris.Rpc.Request{
-        jsonrpc: "2.0",
-        method: "eth_getBalance",
-        params: ["0x742d35Cc6634C0532925a3b844Bc454e4438f44e", "latest"],
-        id: 2
-      }
-
-  All standard EVM JSON-RPC methods are available as functions, with proper parameter
-  validation and type conversion. The module automatically handles request ID generation
-  and maintains the JSON-RPC 2.0 protocol format.
+      request = Rpc.request(client, "eth_blockNumber", [])
+      {:ok, response} = Rpc.send(client, request)
   """
 
-  alias Exiris.RequestCounter
-  alias __MODULE__.Methods
-  alias __MODULE__.JsonRpc.Request
+  alias __MODULE__.Client
+  alias __MODULE__.Request
+  alias __MODULE__.Response
+  alias Exiris.Transport
 
   @type id :: pos_integer()
   @type jsonrpc :: String.t()
   @type method :: String.t()
   @type params :: list(binary())
 
-  @spec build_request(method(), params(), id()) :: Request.t()
-  def build_request(method, params, id \\ RequestCounter.next()) do
-    Request.new(method, params, id)
-  end
+  @jsonrpc_version "2.0"
 
-  @spec methods() :: %{atom() => {atom(), list(atom()), boolean()}}
-  defdelegate methods, to: Methods
+  @doc """
+  Returns the JSON-RPC protocol version used by the client.
+  """
+  @spec jsonrpc_version() :: jsonrpc()
+  def jsonrpc_version(), do: @jsonrpc_version
+
+  @doc """
+  Creates a new JSON-RPC client with the specified transport type and options.
+
+  ## Transport Types
+    * `:http` - HTTP/HTTPS transport
+    * `:custom` - Custom transport implementation
+
+  ## Options
+    * `:rpc_url` - (Required) The endpoint URL
+    * `:encoder` - Function to encode requests to JSON
+    * `:decoder` - Function to decode JSON responses
+    * `:headers` - Additional HTTP headers (HTTP transport only)
+    * `:timeout` - Request timeout in ms (HTTP transport only)
+
+  ## Examples
+
+      client = Rpc.new_client(:http, rpc_url: "https://eth-mainnet.example.com")
+  """
+  @spec new_client(Transport.type(), keyword()) :: Client.t()
+  defdelegate new_client(type, opts), to: Client, as: :new
+
+  @doc """
+  Builds a new JSON-RPC request for the given method and parameters.
+
+  The request will automatically:
+    * Set the protocol version to "2.0"
+    * Generate a unique request ID
+    * Format parameters according to the JSON-RPC spec
+
+  ## Examples
+
+      request = Rpc.request(client, "eth_blockNumber", [])
+      request = Rpc.request(client, "eth_getBalance", ["0x742d...", "latest"])
+  """
+  @spec request(Client.t(), method(), params()) :: Request.t()
+  defdelegate request(client, method, params), to: Client
+
+  @doc """
+  Sends a JSON-RPC request using the client's configured transport.
+
+  ## Returns
+    * `{:ok, response}` - Successful request with decoded response
+    * `{:error, reason}` - Request failed with error details
+
+  ## Examples
+
+      {:ok, response} = Rpc.send(client, request)
+      {:error, reason} = Rpc.send(client, bad_request)
+  """
+  @spec send(Client.t(), Request.t()) :: {:ok, Response.t()} | {:error, Exception.t()}
+  defdelegate send(client, request), to: Client
 end
