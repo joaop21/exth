@@ -162,6 +162,7 @@ defmodule Exiris.Transport do
     * `{:ok, response}` - Successful request with decoded response
     * `{:error, reason}` - Request failed with error reason
   """
-  @spec call(Transportable.t(), Request.t()) :: {:ok, Response.t()} | {:error, error_reason()}
+  @spec call(Transportable.t(), Request.t() | [Request.t()]) ::
+          {:ok, Response.t() | [Response.t()]} | {:error, error_reason()}
   def call(transportable, request), do: Transportable.call(transportable, request)
 end
