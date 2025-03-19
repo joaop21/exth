@@ -70,16 +70,25 @@ defmodule Exiris.Rpc do
 
   @doc """
   Sends a JSON-RPC request using the client's configured transport.
+  Supports both single requests and batch requests.
 
   ## Returns
-    * `{:ok, response}` - Successful request with decoded response
-    * `{:error, reason}` - Request failed with error details
+    * `{:ok, response}` - Successful single request with decoded response
+    * `{:ok, responses}` - Successful batch request with list of responses
+    * `{:error, reason}` - Request failed with error details (Exception.t() or map())
 
   ## Examples
 
+      # Single request
       {:ok, response} = Rpc.send(client, request)
+
+      # Batch request
+      {:ok, responses} = Rpc.send(client, [request1, request2])
+      
+      # Error handling
       {:error, reason} = Rpc.send(client, bad_request)
   """
-  @spec send(Client.t(), Request.t()) :: {:ok, Response.t()} | {:error, Exception.t()}
+  @spec send(Client.t(), Request.t() | [Request.t()]) ::
+          {:ok, Response.t() | [Response.t()]} | {:error, Exception.t()}
   defdelegate send(client, request), to: Client
 end

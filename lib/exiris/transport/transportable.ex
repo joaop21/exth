@@ -31,8 +31,8 @@ defprotocol Exiris.Transport.Transportable do
       {:ok, response} = Transportable.call(transport, request)
   """
 
-  alias Exiris.Rpc.JsonRpc.Request
-  alias Exiris.Rpc.JsonRpc.Response
+  alias Exiris.Rpc.Request
+  alias Exiris.Rpc.Response
 
   @doc """
   Creates a new transport instance with the given options.
@@ -56,22 +56,34 @@ defprotocol Exiris.Transport.Transportable do
   @doc """
   Makes a request using the configured transport.
 
+  Supports both single requests and batch requests (arrays of requests).
+
   ## Parameters
     * `transport` - The configured transport struct
-    * `request` - The request to send (format depends on transport implementation)
+    * `request` - Single request or list of requests (Request.t() | [Request.t()])
 
   ## Returns
-    * `{:ok, response}` - Successful request with decoded response
-    * `{:error, reason}` - Request failed with error reason
+    * `{:ok, response}` - Successful request with decoded response (Response.t())
+    * `{:ok, responses}` - Successful batch request with decoded responses ([Response.t()])
+    * `{:error, reason}` - Request failed with error reason (Exception.t() or map())
 
-  ## Example
-      {:ok, response} = Transportable.call(transport, %{
+  ## Examples
+
+      # Single request
+      {:ok, response} = Transportable.call(transport, %Request{
         jsonrpc: "2.0",
         method: "eth_blockNumber",
         params: [],
         id: 1
       })
+
+      # Batch request
+      {:ok, responses} = Transportable.call(transport, [
+        %Request{method: "eth_blockNumber", params: [], id: 1},
+        %Request{method: "eth_getBalance", params: ["0x123...", "latest"], id: 2}
+      ])
   """
-  @spec call(t, Request.t()) :: {:ok, Response.t()} | {:error, Exception.t()}
+  @spec call(t, Request.t() | [Request.t()]) ::
+          {:ok, Response.t() | [Response.t()]} | {:error, Exception.t()}
   def call(transport, request)
 end

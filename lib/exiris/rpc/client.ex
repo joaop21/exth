@@ -42,8 +42,8 @@ defmodule Exiris.Rpc.Client do
     Request.new(method, params, id)
   end
 
-  @spec send(t(), Request.t()) :: {:ok, Response.t()} | {:error, Exception.t()}
-  def send(%__MODULE__{} = client, %Request{} = request) do
+  @spec send(t(), Request.t() | [Request.t()]) :: {:ok, Response.t()} | {:error, Exception.t()}
+  def send(%__MODULE__{} = client, request) do
     Transport.call(client.transport, request)
   end
 end

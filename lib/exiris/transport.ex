@@ -90,8 +90,8 @@ defmodule Exiris.Transport do
   """
 
   alias __MODULE__.Transportable
-  alias Exiris.Rpc.JsonRpc.Request
-  alias Exiris.Rpc.JsonRpc.Response
+  alias Exiris.Rpc.Request
+  alias Exiris.Rpc.Response
 
   @typedoc """
   Supported transport types:
@@ -162,6 +162,7 @@ defmodule Exiris.Transport do
     * `{:ok, response}` - Successful request with decoded response
     * `{:error, reason}` - Request failed with error reason
   """
-  @spec call(Transportable.t(), Request.t()) :: {:ok, Response.t()} | {:error, error_reason()}
+  @spec call(Transportable.t(), Request.t() | [Request.t()]) ::
+          {:ok, Response.t() | [Response.t()]} | {:error, error_reason()}
   def call(transportable, request), do: Transportable.call(transportable, request)
 end

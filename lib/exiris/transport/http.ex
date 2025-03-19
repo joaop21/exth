@@ -19,6 +19,7 @@ defmodule Exiris.Transport.Http do
   """
 
   alias Exiris.Rpc.Request
+  alias Exiris.Rpc.Response
 
   @typedoc "HTTP transport configuration"
   @type t :: %__MODULE__{
@@ -35,12 +36,13 @@ defmodule Exiris.Transport.Http do
   Makes an HTTP request to the JSON-RPC endpoint.
 
   Returns:
-    * `{:ok, response}` - Successful request with decoded response
+    * `{:ok, responses}` - Successful request with decoded response or responses
     * `{:error, {:http_error, status}}` - HTTP error response
     * `{:error, reason}` - Other errors (network, timeout, etc)
   """
-  @spec call(t(), term()) :: {:ok, term()} | {:error, term()}
-  def call(%__MODULE__{client: client}, %Request{} = request) do
+  @spec call(t(), Request.t() | [Request.t()]) ::
+          {:ok, Response.t() | [Response.t()]} | {:error, term()}
+  def call(%__MODULE__{client: client}, request) do
     case Tesla.post(client, "", request) do
       {:ok, %Tesla.Env{status: 200, body: response}} -> {:ok, response}
       {:ok, %Tesla.Env{status: status}} -> {:error, {:http_error, status}}
