@@ -15,6 +15,7 @@ defmodule Exiris.Rpc.Request do
     jsonrpc: Rpc.jsonrpc_version()
   ]
 
+  @spec new(Rpc.method(), Rpc.params(), Rpc.id()) :: t()
   def new(method, params, id) do
     %__MODULE__{
       method: method,
