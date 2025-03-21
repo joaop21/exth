@@ -1,6 +1,15 @@
 defmodule Exiris.Provider do
   @moduledoc """
-  Provides a macro for generating Ethereum JSON-RPC client methods.
+  Provides a macro for generating Ethereum JSON-RPC client methods with built-in client caching.
+
+  This module automatically generates functions for common Ethereum JSON-RPC methods,
+  handling the client lifecycle, request formatting, and response parsing.
+
+  ## Features
+
+    * Automatic client caching and reuse
+    * Standard Ethereum JSON-RPC method implementations
+    * Consistent error handling
 
   ## Usage
 
@@ -10,9 +19,45 @@ defmodule Exiris.Provider do
           rpc_url: "https://my-eth-node.com"
       end
 
-  ## Required Options
-    * `:transport_type` - The transport type to use (:http)
+      # Then use the generated functions
+      {:ok, balance} = MyProvider.eth_getBalance("0x742d35Cc6634C0532925a3b844Bc454e4438f44e")
+      {:ok, block} = MyProvider.eth_getBlockByNumber(12345)
+
+  ## Configuration Options
+
+  Required:
+    * `:transport_type` - The transport type to use (currently only `:http` is supported)
     * `:rpc_url` - The URL of the Ethereum JSON-RPC endpoint
+
+  ## Generated Functions
+
+  All generated functions follow these conventions:
+
+    * Return `{:ok, result}` for successful calls
+    * Return `{:error, reason}` for failures
+    * Accept an optional `block_tag` parameter (defaults to "latest") where applicable
+
+  ## Error Handling
+
+  Possible error responses:
+    * `{:error, %{code: code, message: msg}}` - RPC method error
+    * `{:error, reason}` - Other errors with description
+
+  ## Examples
+
+      # Get balance for specific block
+      {:ok, balance} = MyProvider.eth_getBalance(
+        "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+        "0x1b4"
+      )
+
+      # Get latest block
+      {:ok, block} = MyProvider.eth_getBlockByNumber("latest", true)
+
+      # Send raw transaction
+      {:ok, tx_hash} = MyProvider.eth_sendRawTransaction("0x...")
+
+  See `Exiris.Provider.Methods` for a complete list of available RPC methods.
   """
 
   @required_opts [:transport_type, :rpc_url]
@@ -31,8 +76,8 @@ defmodule Exiris.Provider do
 
       unless Enum.empty?(missing_opts) do
         raise ArgumentError, """
-        Missing required options: [:#{Enum.join(missing_opts, ", ")}]
-        Required options: [:#{Enum.join(required_opts, ", :")}]
+        Missing required options: #{inspect(missing_opts)}
+        Required options: #{inspect(required_opts)}
         """
       end
     end
