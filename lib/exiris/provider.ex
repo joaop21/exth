@@ -9,7 +9,26 @@ defmodule Exiris.Provider do
 
     * Automatic client caching and reuse
     * Standard Ethereum JSON-RPC method implementations
+    * Type-safe function signatures
     * Consistent error handling
+    * Automatic request ID management
+    * Connection pooling and reuse
+    * Configurable transport layer
+
+  ## Architecture
+
+  The Provider module works as follows:
+
+  1. When `use Exiris.Provider` is called, it:
+     * Validates the required configuration options
+     * Generates a set of standardized RPC method functions
+     * Sets up client caching mechanisms
+
+  2. For each RPC call:
+     * Reuses cached clients when possible
+     * Automatically formats parameters
+     * Handles request/response lifecycle
+     * Provides consistent error handling
 
   ## Usage
 
@@ -62,6 +81,25 @@ defmodule Exiris.Provider do
 
   @required_opts [:transport_type, :rpc_url]
 
+  @doc """
+  Implements the provider behavior in the using module.
+
+  This macro is the entry point for creating an Ethereum JSON-RPC provider.
+  It validates the provided options and generates all the necessary functions
+  for interacting with an Ethereum node.
+
+  ## Options
+
+  See the moduledoc for complete configuration options.
+
+  ## Examples
+
+      defmodule MyProvider do
+        use Exiris.Provider,
+          transport_type: :http,
+          rpc_url: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID"
+      end
+  """
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts, required_opts: @required_opts] do
       Exiris.Provider.validate_options!(opts, required_opts)
@@ -69,7 +107,21 @@ defmodule Exiris.Provider do
     end
   end
 
-  @doc false
+  @doc """
+  Validates the configuration options provided to the provider.
+
+  This macro ensures that all required options are present and have valid values.
+  It raises an `ArgumentError` if any required options are missing.
+
+  ## Parameters
+
+    * `opts` - Keyword list of provider options
+    * `required_opts` - List of required option keys
+
+  ## Raises
+
+    * `ArgumentError` - When required options are missing
+  """
   defmacro validate_options!(opts, required_opts) do
     quote bind_quoted: [opts: opts, required_opts: required_opts] do
       missing_opts = Enum.reject(required_opts, &Keyword.has_key?(opts, &1))
@@ -83,6 +135,27 @@ defmodule Exiris.Provider do
     end
   end
 
+  @doc """
+  Generates the provider module with all RPC method implementations.
+
+  This macro creates the actual provider implementation by:
+    * Setting up the client cache
+    * Generating functions for each RPC method
+    * Implementing response handling
+    * Creating helper functions
+
+  ## Parameters
+
+    * `opts` - Keyword list of provider options
+
+  ## Generated Functions
+
+  For each RPC method defined in `Exiris.Provider.Methods`, this macro generates:
+    * A public function with proper type specs
+    * Documentation with parameters and return values
+    * Automatic parameter validation
+    * Response handling and formatting
+  """
   defmacro generate_provider(opts) do
     quote bind_quoted: [opts: opts] do
       alias Exiris.Rpc
@@ -140,7 +213,37 @@ defmodule Exiris.Provider do
         end
       end
 
-      defp get_client() do
+      @doc """
+      Retrieves or creates a new RPC client instance.
+
+      This function manages the lifecycle of RPC clients by:
+        * First attempting to fetch an existing client from the cache
+        * Creating and caching a new client if none exists
+
+      The client is uniquely identified by the combination of:
+        * transport_type (e.g., :http)
+        * rpc_url (the endpoint URL)
+
+      ## Returns
+
+        * `client` - A configured RPC client instance
+
+      ## Examples
+
+          # Automatically called by RPC methods
+          client = MyProvider.get_client()
+
+      ## Cache Behavior
+
+      The function implements a "get or create" pattern:
+        1. Attempts to fetch a cached client
+        2. If no cached client exists, creates a new one
+        3. New clients are automatically cached for future use
+
+      This caching mechanism helps reduce connection overhead and
+      maintain connection pooling efficiency.
+      """
+      def get_client() do
         transport_type = Keyword.fetch!(@provider_opts, :transport_type)
         rpc_url = Keyword.fetch!(@provider_opts, :rpc_url)
 
