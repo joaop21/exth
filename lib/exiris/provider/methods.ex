@@ -1,6 +1,63 @@
 defmodule Exiris.Provider.Methods do
   @moduledoc """
   Defines the available Ethereum JSON-RPC methods and their parameters.
+
+  This module maintains a comprehensive mapping of supported Ethereum JSON-RPC methods,
+  their parameter requirements, and whether they accept a default block parameter.
+
+  ## Method Structure
+
+  Each method is defined as a tuple with three elements:
+    * RPC method name (atom)
+    * List of required parameters (list of atoms)
+    * Boolean indicating if method accepts a block parameter (boolean)
+
+  ## Method Categories
+
+  Methods are organized into the following namespaces:
+
+  ### Web3 Namespace
+    * Basic web3 operations (clientVersion, sha3)
+
+  ### Net Namespace
+    * Network status and information
+    * Peer connections
+    * Network version
+
+  ### Eth Namespace
+    * Basic chain information
+    * Block operations
+    * Transaction operations
+    * Account operations
+    * Filter management
+    * Contract interaction
+
+  ## Parameter Types
+
+  Common parameter types include:
+    * `:address` - 20-byte Ethereum address (hex string)
+    * `:block_hash` - 32-byte block hash (hex string)
+    * `:block_number` - Block number or tag ("latest", "earliest", "pending")
+    * `:transaction_hash` - 32-byte transaction hash (hex string)
+    * `:data` - Arbitrary hex data
+    * `:filter` - Filter options object
+    * `:transaction` - Transaction object
+    * `:position` - Storage position (hex string)
+
+  ## Usage
+
+  This module is primarily used internally by the Provider module to:
+    * Generate method implementations
+    * Validate method parameters
+    * Handle default block parameters
+
+  To get the complete list of available methods:
+
+      iex> Exiris.Provider.Methods.methods()
+      %{
+        client_version: {:web3_clientVersion, [], false},
+        # ... other methods
+      }
   """
 
   @rpc_methods %{
@@ -72,6 +129,26 @@ defmodule Exiris.Provider.Methods do
     call: {:eth_call, [:transaction], true}
   }
 
+  @doc """
+  Returns a map of all supported Ethereum JSON-RPC methods.
+
+  Each method entry contains:
+    * Key: The friendly method name used in the generated functions
+    * Value: A tuple of {rpc_method_name, parameter_list, accepts_block_param}
+
+  ## Returns
+
+    * Map of method definitions
+
+  ## Examples
+
+      iex> Exiris.Provider.Methods.methods()
+      %{
+        client_version: {:web3_clientVersion, [], false},
+        get_balance: {:eth_getBalance, [:address], true},
+        # ... other methods
+      }
+  """
   @spec methods() :: %{atom() => {atom(), list(atom()), boolean()}}
   def methods, do: @rpc_methods
 end
