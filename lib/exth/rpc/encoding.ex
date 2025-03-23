@@ -1,4 +1,4 @@
-defmodule Exiris.Rpc.Encoding do
+defmodule Exth.Rpc.Encoding do
   @moduledoc """
   Handles encoding and decoding of JSON-RPC requests and responses.
 
@@ -131,12 +131,12 @@ defmodule Exiris.Rpc.Encoding do
     * Supports both single and batch operations
     * Validates protocol compliance
 
-  See `Exiris.Rpc.Request` for request structure details and
-  `Exiris.Rpc.Response` for response handling.
+  See `Exth.Rpc.Request` for request structure details and
+  `Exth.Rpc.Response` for response handling.
   """
 
-  alias Exiris.Rpc.Response
-  alias Exiris.Rpc.Request
+  alias Exth.Rpc.Response
+  alias Exth.Rpc.Request
 
   @spec encode_request(Request.t() | [Request.t()]) :: {:ok, String.t()} | {:error, Exception.t()}
   def encode_request(%Request{} = request) do

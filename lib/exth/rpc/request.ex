@@ -1,5 +1,5 @@
-defmodule Exiris.Rpc.Request do
-  alias Exiris.Rpc
+defmodule Exth.Rpc.Request do
+  alias Exth.Rpc
 
   @type t :: %__MODULE__{
           id: Rpc.id(),

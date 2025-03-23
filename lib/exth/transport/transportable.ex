@@ -1,4 +1,4 @@
-defprotocol Exiris.Transport.Transportable do
+defprotocol Exth.Transport.Transportable do
   @moduledoc """
   Protocol defining the interface for JSON-RPC transport implementations.
 
@@ -31,8 +31,8 @@ defprotocol Exiris.Transport.Transportable do
       {:ok, response} = Transportable.call(transport, request)
   """
 
-  alias Exiris.Rpc.Request
-  alias Exiris.Rpc.Response
+  alias Exth.Rpc.Request
+  alias Exth.Rpc.Response
 
   @doc """
   Creates a new transport instance with the given options.

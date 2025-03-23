@@ -1,4 +1,4 @@
-defmodule Exiris.Provider do
+defmodule Exth.Provider do
   @moduledoc """
   Provides a macro for generating Ethereum JSON-RPC client methods with built-in client caching.
 
@@ -19,7 +19,7 @@ defmodule Exiris.Provider do
 
   The Provider module works as follows:
 
-  1. When `use Exiris.Provider` is called, it:
+  1. When `use Exth.Provider` is called, it:
      * Validates the required configuration options
      * Generates a set of standardized RPC method functions
      * Sets up client caching mechanisms
@@ -33,7 +33,7 @@ defmodule Exiris.Provider do
   ## Usage
 
       defmodule MyProvider do
-        use Exiris.Provider,
+        use Exth.Provider,
           transport_type: :http,
           rpc_url: "https://my-eth-node.com"
       end
@@ -76,7 +76,7 @@ defmodule Exiris.Provider do
       # Send raw transaction
       {:ok, tx_hash} = MyProvider.eth_sendRawTransaction("0x...")
 
-  See `Exiris.Provider.Methods` for a complete list of available RPC methods.
+  See `Exth.Provider.Methods` for a complete list of available RPC methods.
   """
 
   @required_opts [:transport_type, :rpc_url]
@@ -95,15 +95,15 @@ defmodule Exiris.Provider do
   ## Examples
 
       defmodule MyProvider do
-        use Exiris.Provider,
+        use Exth.Provider,
           transport_type: :http,
           rpc_url: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID"
       end
   """
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts, required_opts: @required_opts] do
-      Exiris.Provider.validate_options!(opts, required_opts)
-      Exiris.Provider.generate_provider(opts)
+      Exth.Provider.validate_options!(opts, required_opts)
+      Exth.Provider.generate_provider(opts)
     end
   end
 
@@ -150,7 +150,7 @@ defmodule Exiris.Provider do
 
   ## Generated Functions
 
-  For each RPC method defined in `Exiris.Provider.Methods`, this macro generates:
+  For each RPC method defined in `Exth.Provider.Methods`, this macro generates:
     * A public function with proper type specs
     * Documentation with parameters and return values
     * Automatic parameter validation
@@ -158,10 +158,10 @@ defmodule Exiris.Provider do
   """
   defmacro generate_provider(opts) do
     quote bind_quoted: [opts: opts] do
-      alias Exiris.Rpc
-      alias Exiris.Rpc.Response
-      alias Exiris.Provider.ClientCache
-      alias Exiris.Provider.Methods
+      alias Exth.Rpc
+      alias Exth.Rpc.Response
+      alias Exth.Provider.ClientCache
+      alias Exth.Provider.Methods
 
       @type rpc_response :: {:ok, term()} | {:error, term()}
 

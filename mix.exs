@@ -1,9 +1,9 @@
-defmodule Exiris.MixProject do
+defmodule Exth.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :exiris,
+      app: :exth,
       version: "0.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
@@ -14,7 +14,7 @@ defmodule Exiris.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Exiris.Application, []}
+      mod: {Exth.Application, []}
     ]
   end
 
