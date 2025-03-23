@@ -1,4 +1,4 @@
-defmodule Exiris.Provider.Methods do
+defmodule Exth.Provider.Methods do
   @moduledoc """
   Defines the available Ethereum JSON-RPC methods and their parameters.
 
@@ -53,7 +53,7 @@ defmodule Exiris.Provider.Methods do
 
   To get the complete list of available methods:
 
-      iex> Exiris.Provider.Methods.methods()
+      iex> Exth.Provider.Methods.methods()
       %{
         client_version: {:web3_clientVersion, [], false},
         # ... other methods
@@ -142,7 +142,7 @@ defmodule Exiris.Provider.Methods do
 
   ## Examples
 
-      iex> Exiris.Provider.Methods.methods()
+      iex> Exth.Provider.Methods.methods()
       %{
         client_version: {:web3_clientVersion, [], false},
         get_balance: {:eth_getBalance, [:address], true},

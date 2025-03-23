@@ -1,15 +1,15 @@
-defmodule Exiris.Transport.Http do
+defmodule Exth.Transport.Http do
   @moduledoc """
   HTTP transport implementation for JSON-RPC requests using Tesla.
 
-  Implements the `Exiris.Transport.Transportable` protocol for making HTTP/HTTPS 
+  Implements the `Exth.Transport.Transportable` protocol for making HTTP/HTTPS 
   requests to JSON-RPC endpoints. Uses Tesla as the HTTP client with Mint as the 
   default adapter.
 
   ## Usage
 
       transport = Transportable.new(
-        %Exiris.Transport.Http{},
+        %Exth.Transport.Http{},
         rpc_url: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID",
         encoder: &Jason.encode!/1,
         decoder: &Jason.decode!/1
@@ -18,8 +18,8 @@ defmodule Exiris.Transport.Http do
       {:ok, response} = Transportable.call(transport, request)
   """
 
-  alias Exiris.Rpc.Request
-  alias Exiris.Rpc.Response
+  alias Exth.Rpc.Request
+  alias Exth.Rpc.Response
 
   @typedoc "HTTP transport configuration"
   @type t :: %__MODULE__{
@@ -30,7 +30,7 @@ defmodule Exiris.Transport.Http do
 
   @adapter Tesla.Adapter.Mint
   @default_timeout 30_000
-  @user_agent "#{Application.spec(:exiris, :description)}/#{Application.spec(:exiris, :vsn)}"
+  @user_agent "#{Application.spec(:exth, :description)}/#{Application.spec(:exth, :vsn)}"
 
   @doc """
   Makes an HTTP request to the JSON-RPC endpoint.
@@ -163,7 +163,7 @@ defmodule Exiris.Transport.Http do
   end
 end
 
-defimpl Exiris.Transport.Transportable, for: Exiris.Transport.Http do
-  def new(_transport, opts), do: Exiris.Transport.Http.new(opts)
-  def call(transport, request), do: Exiris.Transport.Http.call(transport, request)
+defimpl Exth.Transport.Transportable, for: Exth.Transport.Http do
+  def new(_transport, opts), do: Exth.Transport.Http.new(opts)
+  def call(transport, request), do: Exth.Transport.Http.call(transport, request)
 end

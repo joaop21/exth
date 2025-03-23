@@ -1,5 +1,5 @@
-defmodule Exiris.Rpc.Response do
-  alias Exiris.Rpc
+defmodule Exth.Rpc.Response do
+  alias Exth.Rpc
 
   defmodule Success do
     @type t :: %__MODULE__{

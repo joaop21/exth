@@ -1,4 +1,4 @@
-defmodule Exiris.Transport do
+defmodule Exth.Transport do
   @moduledoc """
   Factory module for creating JSON-RPC transport implementations.
 
@@ -63,7 +63,7 @@ defmodule Exiris.Transport do
 
   2. Implement the `Transportable` protocol:
 
-         defimpl Exiris.Transport.Transportable, for: MyTransport do
+         defimpl Exth.Transport.Transportable, for: MyTransport do
            def new(_transport, opts) do
              %MyTransport{config: opts}
            end
@@ -104,13 +104,13 @@ defmodule Exiris.Transport do
     * Properly handle connection pooling
     * Use secure transport options in production
 
-  See `Exiris.Transport.Transportable` for protocol details and
-  `Exiris.Transport.Http` for HTTP transport specifics.
+  See `Exth.Transport.Transportable` for protocol details and
+  `Exth.Transport.Http` for HTTP transport specifics.
   """
 
   alias __MODULE__.Transportable
-  alias Exiris.Rpc.Request
-  alias Exiris.Rpc.Response
+  alias Exth.Rpc.Request
+  alias Exth.Rpc.Response
 
   @typedoc """
   Supported transport types:

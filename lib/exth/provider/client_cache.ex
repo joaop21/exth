@@ -1,4 +1,4 @@
-defmodule Exiris.Provider.ClientCache do
+defmodule Exth.Provider.ClientCache do
   @moduledoc """
   Provides caching functionality for Ethereum JSON-RPC clients.
 
@@ -35,7 +35,7 @@ defmodule Exiris.Provider.ClientCache do
     * Efficient lookup pattern
 
   Values:
-    * Type: `Exiris.Rpc.Client` structs
+    * Type: `Exth.Rpc.Client` structs
     * Complete client configuration
     * Ready-to-use instances
 
@@ -113,12 +113,12 @@ defmodule Exiris.Provider.ClientCache do
     * Survives process crashes
     * Uses minimal memory
 
-  See `Exiris.Rpc.Client` for client details and
-  `Exiris.Transport` for transport configuration.
+  See `Exth.Rpc.Client` for client details and
+  `Exth.Transport` for transport configuration.
   """
 
-  alias Exiris.Rpc.Client
-  alias Exiris.Rpc.Client
+  alias Exth.Rpc.Client
+  alias Exth.Rpc.Client
 
   @doc """
   Retrieves a cached RPC client for the given transport type and URL.
@@ -144,7 +144,7 @@ defmodule Exiris.Provider.ClientCache do
       iex> ClientCache.get_client(:http, "https://non-existing.example.com")
       {:error, :not_found}
   """
-  @spec get_client(Exiris.Transport.type(), String.t()) ::
+  @spec get_client(Exth.Transport.type(), String.t()) ::
           {:ok, Client.t()} | {:error, :not_found}
   def get_client(transport_type, rpc_url) do
     try do
@@ -178,7 +178,7 @@ defmodule Exiris.Provider.ClientCache do
       iex> ClientCache.create_client(:http, "https://eth-mainnet.example.com", client)
       %Client{}
   """
-  @spec create_client(Exiris.Transport.type(), String.t(), Client.t()) :: Client.t()
+  @spec create_client(Exth.Transport.type(), String.t(), Client.t()) :: Client.t()
   def create_client(transport_type, rpc_url, client) do
     with :ok <- :persistent_term.put(build_key(transport_type, rpc_url), client) do
       client

@@ -1,4 +1,4 @@
-defmodule Exiris.Rpc do
+defmodule Exth.Rpc do
   @moduledoc """
   Core module for making JSON-RPC requests to EVM-compatible blockchain nodes.
 
@@ -16,7 +16,7 @@ defmodule Exiris.Rpc do
   alias __MODULE__.Client
   alias __MODULE__.Request
   alias __MODULE__.Response
-  alias Exiris.Transport
+  alias Exth.Transport
 
   @type id :: pos_integer()
   @type jsonrpc :: String.t()

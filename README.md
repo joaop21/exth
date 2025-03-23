@@ -1,8 +1,8 @@
-# Exiris
+# Exth
 
-Exiris (pronounced as "here she is") is an Elixir client for interacting with
-EVM-compatible blockchain nodes via JSON-RPC. It provides a robust, type-safe
-interface for making Ethereum RPC calls.
+Exth is an Elixir client for interacting with EVM-compatible blockchain nodes
+via JSON-RPC. It provides a robust, type-safe interface for making Ethereum RPC
+calls.
 
 ## Features
 
@@ -15,12 +15,12 @@ interface for making Ethereum RPC calls.
 
 ## Installation
 
-Add `exiris` to your list of dependencies in `mix.exs`:
+Add `exth` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:exiris, "~> 0.1.0"}
+    {:exth, "~> 0.1.0"}
   ]
 end
 ```
@@ -31,7 +31,7 @@ end
 
 ```elixir
 defmodule MyClient do
-  use Exiris.Provider,
+  use Exth.Provider,
     transport_type: :http,
     rpc_url: "https://YOUR-RPC-URL"
 end
@@ -81,7 +81,7 @@ config = [
 
 ```elixir
 defmodule MyClient do
-  use Exiris.Provider,
+  use Exth.Provider,
     transport_type: :http,
     rpc_url: "https://eth-mainnet.example.com",
     headers: [
@@ -93,7 +93,7 @@ end
 
 ## Error Handling
 
-Exiris provides detailed error information:
+Exth provides detailed error information:
 
 ```elixir
 case MyClient.get_balance("0x123...", "latest") do

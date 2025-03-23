@@ -1,4 +1,4 @@
-defmodule Exiris.Rpc.Client do
+defmodule Exth.Rpc.Client do
   @moduledoc """
   Core client module for making JSON-RPC requests to EVM nodes.
 
@@ -55,7 +55,7 @@ defmodule Exiris.Rpc.Client do
   ## Transport Layer
 
   The client supports different transport mechanisms through the
-  `Exiris.Transport.Transportable` protocol:
+  `Exth.Transport.Transportable` protocol:
 
     * Built-in HTTP transport using Tesla/Mint
     * Custom transport implementations
@@ -91,15 +91,15 @@ defmodule Exiris.Rpc.Client do
       ]
       {:ok, [block_number, gas_price]} = Client.send(client, requests)
 
-  See `Exiris.Transport` for transport details and `Exiris.Rpc.Request`
+  See `Exth.Transport` for transport details and `Exth.Rpc.Request`
   for request formatting.
   """
-  alias Exiris.Transport
-  alias Exiris.Rpc
-  alias Exiris.Rpc.Encoding
-  alias Exiris.Rpc.Request
-  alias Exiris.Rpc.Response
-  alias Exiris.Transport.Transportable
+  alias Exth.Transport
+  alias Exth.Rpc
+  alias Exth.Rpc.Encoding
+  alias Exth.Rpc.Request
+  alias Exth.Rpc.Response
+  alias Exth.Transport.Transportable
 
   @transport_types [:http, :custom]
 
