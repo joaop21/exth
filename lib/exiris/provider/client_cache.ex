@@ -2,31 +2,119 @@ defmodule Exiris.Provider.ClientCache do
   @moduledoc """
   Provides caching functionality for Ethereum JSON-RPC clients.
 
-  This module implements a persistent caching mechanism for RPC clients using Erlang's
-  `:persistent_term` storage, which provides fast read access with a small memory footprint.
+  This module implements a high-performance, persistent caching mechanism for RPC clients
+  using Erlang's `:persistent_term` storage. It ensures efficient client reuse while
+  maintaining a small memory footprint.
 
-  ## Cache Implementation
+  ## Features
 
-  The cache:
-    * Uses `:persistent_term` for storage
-    * Keys are tuples of `{__MODULE__, transport_type, rpc_url}`
-    * Values are `Exiris.Rpc.Client` structs
-    * Provides atomic operations for getting and creating clients
+    * Persistent client caching
+    * Thread-safe operations
+    * O(1) lookup performance
+    * Memory-efficient storage
+    * Process-independent cache
+    * Atomic operations
+    * Automatic client lifecycle
+
+  ## Cache Architecture
+
+  The cache is built on `:persistent_term` and provides:
+
+    * Fast, constant-time lookups
+    * Single copy per cached term
+    * Process crash resilience
+    * Node-local storage
+    * Atomic operations
+    * Low memory overhead
+
+  ## Cache Structure
+
+  Keys:
+    * Format: `{__MODULE__, transport_type, rpc_url}`
+    * Unique per client configuration
+    * Efficient lookup pattern
+
+  Values:
+    * Type: `Exiris.Rpc.Client` structs
+    * Complete client configuration
+    * Ready-to-use instances
+
+  ## Usage Examples
+
+      # Fetch existing client
+      {:ok, client} = ClientCache.get_client(:http, "https://eth-mainnet.example.com")
+
+      # Create and cache new client
+      client = ClientCache.create_client(
+        :http,
+        "https://eth-mainnet.example.com",
+        %Client{
+          transport: transport,
+          counter: counter
+        }
+      )
+
+      # Pattern for get-or-create
+      case ClientCache.get_client(transport_type, rpc_url) do
+        {:ok, client} ->
+          client
+        {:error, :not_found} ->
+          client = create_new_client()
+          ClientCache.create_client(transport_type, rpc_url, client)
+      end
 
   ## Performance Characteristics
 
-    * Fast reads: O(1) lookup time
-    * Memory efficient: Only one copy per term
-    * Process-independent: Cache survives process restarts
-    * Node-local: Cache is not distributed
+  Read Operations:
+    * O(1) lookup time
+    * No process communication
+    * Zero-copy term sharing
+    * Minimal memory overhead
 
-  ## Usage
+  Write Operations:
+    * Atomic updates
+    * Copy-on-write semantics
+    * Process-independent durability
 
-      # Get a client from cache
-      {:ok, client} = ClientCache.get_client(:http, "https://eth-mainnet.example.com")
+  Cache Properties:
+    * Node-local scope
+    * Process-independent
+    * Crash-resilient
+    * Memory-efficient
 
-      # Create and cache a new client
-      client = ClientCache.create_client(:http, "https://eth-mainnet.example.com", %Client{})
+  ## Best Practices
+
+    * Reuse clients when possible
+    * Handle cache misses gracefully
+    * Monitor cache size
+    * Clean up unused clients
+    * Use appropriate timeouts
+    * Implement circuit breakers
+
+  ## Limitations
+
+    * Node-local only (not distributed)
+    * No automatic cleanup
+    * Memory limited by node
+    * No expiration mechanism
+
+  ## Error Handling
+
+    * `{:ok, client}` - Client found in cache
+    * `{:error, :not_found}` - Cache miss
+    * Raises `ArgumentError` for invalid inputs
+
+  ## Implementation Details
+
+  The cache uses Erlang's `:persistent_term` module which:
+    * Stores terms in a special ETS table
+    * Provides fast, copy-free reads
+    * Maintains single source of truth
+    * Survives process crashes
+    * Uses minimal memory
+
+  See `Exiris.Rpc.Client` for client details and
+  `Exiris.Transport` for transport configuration.
   """
 
   alias Exiris.Rpc.Client
