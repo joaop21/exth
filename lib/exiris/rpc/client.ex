@@ -1,4 +1,99 @@
 defmodule Exiris.Rpc.Client do
+  @moduledoc """
+  Core client module for making JSON-RPC requests to EVM nodes.
+
+  This module provides the main client interface for interacting with EVM nodes,
+  handling request creation, response parsing, and client lifecycle management.
+
+  ## Features
+
+    * Atomic request ID generation
+    * Transport abstraction
+    * Request/response lifecycle management
+    * Batch request support
+    * Automatic encoding/decoding
+    * Error handling
+
+  ## Usage
+
+      # Create a new client
+      client = Client.new(:http,
+        rpc_url: "https://eth-mainnet.example.com",
+        timeout: 30_000
+      )
+
+      # Create a request
+      request = Client.request(client, "eth_blockNumber", [])
+
+      # Send the request
+      {:ok, response} = Client.send(client, request)
+
+      # Send batch requests
+      {:ok, responses} = Client.send(client, [request1, request2])
+
+  ## Client Configuration
+
+  The client accepts the following options:
+
+    * `:rpc_url` - (Required) The endpoint URL
+    * `:transport_type` - Transport to use (`:http` or `:custom`)
+    * `:timeout` - Request timeout in milliseconds
+    * `:headers` - Additional HTTP headers (HTTP only)
+    * `:encoder` - Custom request encoder (defaults to Jason)
+    * `:decoder` - Custom response decoder (defaults to Jason)
+
+  ## Request ID Generation
+
+  The client uses Erlang's `:atomics` for thread-safe, monotonic request ID
+  generation. This ensures:
+
+    * Unique IDs across concurrent requests
+    * No ID collisions in batch requests
+    * Efficient ID allocation
+    * Process-independent ID tracking
+
+  ## Transport Layer
+
+  The client supports different transport mechanisms through the
+  `Exiris.Transport.Transportable` protocol:
+
+    * Built-in HTTP transport using Tesla/Mint
+    * Custom transport implementations
+    * Future support for WebSocket and IPC
+
+  ## Error Handling
+
+  The client provides consistent error handling:
+
+    * `{:ok, response}` - Successful request
+    * `{:error, reason}` - Request failed
+
+  ## Best Practices
+
+    * Reuse client instances when possible
+    * Use batch requests for multiple calls
+    * Implement appropriate timeouts
+    * Handle errors gracefully
+    * Monitor client health
+    * Clean up resources when done
+
+  ## Examples
+
+      # Basic request
+      client = Client.new(:http, rpc_url: "https://eth-mainnet.example.com")
+      request = Client.request(client, "eth_blockNumber", [])
+      {:ok, block_number} = Client.send(client, request)
+
+      # Batch request
+      requests = [
+        Client.request(client, "eth_blockNumber", []),
+        Client.request(client, "eth_gasPrice", [])
+      ]
+      {:ok, [block_number, gas_price]} = Client.send(client, requests)
+
+  See `Exiris.Transport` for transport details and `Exiris.Rpc.Request`
+  for request formatting.
+  """
   alias Exiris.Transport
   alias Exiris.Rpc
   alias Exiris.Rpc.Encoding

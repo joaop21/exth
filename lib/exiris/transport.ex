@@ -2,91 +2,110 @@ defmodule Exiris.Transport do
   @moduledoc """
   Factory module for creating JSON-RPC transport implementations.
 
-  This module provides a simple interface for creating and using different transport
-  implementations (HTTP, WebSocket, IPC) through the `Transportable` protocol.
+  This module provides a unified interface for creating and managing different transport
+  mechanisms (HTTP, WebSocket, IPC) for JSON-RPC communication with EVM nodes.
 
-  ## Quick Start
+  ## Features
 
-      # Create an HTTP transport
-      transport = Transport.new(:http,
-        rpc_url: "https://eth-mainnet.example.com",
-        encoder: &encode_request!/1,
-        decoder: &decode_request!/1
-      )
-
-      # Make a JSON-RPC request
-      {:ok, response} = Transport.call(transport, %{
-        jsonrpc: "2.0",
-        method: "eth_blockNumber",
-        params: [],
-        id: 1
-      })
+    * Pluggable transport system via the `Transportable` protocol
+    * Built-in HTTP transport with Tesla/Mint
+    * Consistent interface across transport types
+    * Automatic request/response encoding/decoding
+    * Configurable timeout and retry mechanisms
+    * Transport-specific option handling
 
   ## Transport Types
 
-  Currently supported transport types:
+  Currently supported:
+    * `:http` - HTTP/HTTPS transport using Tesla with Mint adapter
+    * `:custom` - Custom transport implementations
 
-  * `:http` - HTTP/HTTPS transport using `Exiris.Transport.Http`
-  * `:custom` - Custom transport implementation (requires `:module` option)
+  Coming soon:
+    * `:ws` - WebSocket transport
+    * `:ipc` - Unix domain socket transport
 
-  ## Configuration Options
+  ## Usage
+
+      # Create an HTTP transport
+      transport = Transport.new(:http,
+        rpc_url: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID",
+        timeout: 30_000,
+        headers: [{"authorization", "Bearer token"}]
+      )
+
+      # Make requests
+      {:ok, response} = Transport.call(transport, request)
+      {:ok, responses} = Transport.call(transport, [request1, request2])
+
+  ## Configuration
 
   Common options for all transports:
 
-  * `:rpc_url` - (Required) The endpoint URL for the transport
-  * `:encoder` - (Required) Function to encode requests
-  * `:decoder` - (Required) Function to decode responses
+    * `:rpc_url` - (Required) The endpoint URL
+    * `:encoder` - (Required) Function to encode requests to JSON
+    * `:decoder` - (Required) Function to decode JSON responses
 
   HTTP-specific options:
 
-  * `:headers` - Additional HTTP headers for requests
-  * `:timeout` - Request timeout in milliseconds (default: 30000)
-  * `:adapter` - Tesla adapter to use (default: `Tesla.Adapter.Mint`)
-
-  Custom transport options:
-
-  * `:module` - (Required) Module implementing the `Transportable` protocol
-  * Additional options specific to the custom implementation
+    * `:headers` - Additional HTTP headers
+    * `:timeout` - Request timeout in milliseconds (default: 30000)
+    * `:adapter` - Tesla adapter to use (default: Tesla.Adapter.Mint)
 
   ## Custom Transport Implementation
 
-  To create a custom transport:
+  To implement a custom transport:
 
-  1. Define a struct for your transport configuration
-  2. Implement the `Transportable` protocol for your struct
+  1. Define your transport struct:
 
-  Example:
+         defmodule MyTransport do
+           defstruct [:config]
+         end
 
-      defmodule MyTransport do
-        defstruct [:config]
+  2. Implement the `Transportable` protocol:
 
-        defimpl Exiris.Transport.Transportable do
-          def new(_transport, opts) do
-            %MyTransport{config: opts}
-          end
+         defimpl Exiris.Transport.Transportable, for: MyTransport do
+           def new(_transport, opts) do
+             %MyTransport{config: opts}
+           end
 
-          def call(transport, request) do
-            # Implement request handling
-            {:ok, response}
-          end
-        end
-      end
+           def call(transport, request) do
+             # Implement request handling
+             {:ok, response}
+           end
+         end
 
-      # Use your custom transport
-      transport = Transport.new(:custom,
-        module: MyTransport,
-        rpc_url: "custom://endpoint"
-      )
+  3. Use your transport:
+
+         transport = Transport.new(:custom,
+           module: MyTransport,
+           rpc_url: "custom://endpoint",
+           # other options...
+         )
 
   ## Error Handling
 
-  The module will raise `ArgumentError` when:
-  * Invalid transport type is specified
-  * `:module` option is missing for custom transports
+  The module uses consistent error handling:
 
-  Runtime errors are returned as tagged tuples:
-  * `{:ok, response}` - Successful request with decoded response
-  * `{:error, reason}` - Request failed with error reason
+    * `{:ok, response}` - Successful request with decoded response
+    * `{:ok, responses}` - Successful batch request with responses
+    * `{:error, reason}` - Request failed with detailed reason
+
+  HTTP-specific errors:
+    * `{:error, {:http_error, status}}` - HTTP error response
+    * `{:error, :timeout}` - Request timeout
+    * `{:error, :network_error}` - Network connectivity issues
+
+  ## Best Practices
+
+    * Use appropriate timeouts for your use case
+    * Implement retry logic for transient failures
+    * Handle batch requests efficiently
+    * Monitor transport health and metrics
+    * Properly handle connection pooling
+    * Use secure transport options in production
+
+  See `Exiris.Transport.Transportable` for protocol details and
+  `Exiris.Transport.Http` for HTTP transport specifics.
   """
 
   alias __MODULE__.Transportable
