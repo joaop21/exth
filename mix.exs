@@ -10,8 +10,8 @@ defmodule Exth.MixProject do
       deps: deps(),
 
       # Docs
-      name: "Exiris",
-      source_url: "https://github.com/joaop21/exiris",
+      name: "Exth",
+      source_url: "https://github.com/joaop21/exth",
       # homepage_url: "http://YOUR_PROJECT_HOMEPAGE",
       docs: docs()
     ]
@@ -38,7 +38,7 @@ defmodule Exth.MixProject do
       # The main page in the docs
       main: "readme",
       # logo: "path/to/logo.png",
-      extras: ["README.md"]
+      extras: ["README.md", "LICENSE"]
     ]
   end
 end
