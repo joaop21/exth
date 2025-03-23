@@ -37,7 +37,7 @@ defmodule MyClient do
 end
 ```
 
-1. Make RPC calls:
+2. Make RPC calls:
 
 ```elixir
 # Get the latest block number
