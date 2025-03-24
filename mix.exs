@@ -12,7 +12,6 @@ defmodule Exth.MixProject do
       # Docs
       name: "Exth",
       source_url: "https://github.com/joaop21/exth",
-      # homepage_url: "http://YOUR_PROJECT_HOMEPAGE",
       docs: docs()
     ]
   end
@@ -37,8 +36,12 @@ defmodule Exth.MixProject do
     [
       # The main page in the docs
       main: "readme",
-      # logo: "path/to/logo.png",
-      extras: ["README.md", "LICENSE"]
+      extras: ["README.md", "LICENSE"],
+      nest_modules_by_prefix: [
+        Exth.Provider,
+        Exth.Rpc,
+        Exth.Transport
+      ]
     ]
   end
 end
