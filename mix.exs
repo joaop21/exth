@@ -7,7 +7,12 @@ defmodule Exth.MixProject do
       version: "0.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+
+      # Docs
+      name: "Exth",
+      source_url: "https://github.com/joaop21/exth",
+      docs: docs()
     ]
   end
 
@@ -20,9 +25,23 @@ defmodule Exth.MixProject do
 
   defp deps do
     [
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:jason, "~> 1.4"},
       {:mint, "~> 1.7", only: :dev},
       {:tesla, "~> 1.14"}
+    ]
+  end
+
+  defp docs do
+    [
+      # The main page in the docs
+      main: "readme",
+      extras: ["README.md", "LICENSE"],
+      nest_modules_by_prefix: [
+        Exth.Provider,
+        Exth.Rpc,
+        Exth.Transport
+      ]
     ]
   end
 end
