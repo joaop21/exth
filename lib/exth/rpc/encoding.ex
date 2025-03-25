@@ -157,16 +157,36 @@ defmodule Exth.Rpc.Encoding do
           {:ok, Response.t() | [Response.t()]} | {:error, Exception.t()}
   def decode_response(json) do
     with {:ok, response} <- Jason.decode(json) do
-      {:ok, do_decode_response(response)}
+      do_decode_response(response)
     end
   end
 
-  defp do_decode_response(%{"id" => id, "result" => result}), do: Response.success(id, result)
+  defp do_decode_response(%{"id" => id, "result" => result}),
+    do: {:ok, Response.success(id, result)}
 
-  defp do_decode_response(%{"id" => id, "error" => error}),
-    do: Response.error(id, error["code"], error["message"])
+  defp do_decode_response(%{"id" => id, "error" => error}) do
+    case error do
+      %{"code" => code, "message" => message, "data" => data} ->
+        {:ok, Response.error(id, code, message, data)}
 
-  defp do_decode_response(response) when is_list(response) do
-    Enum.map(response, &do_decode_response/1)
+      %{"code" => code, "message" => message} ->
+        {:ok, Response.error(id, code, message)}
+    end
+  end
+
+  defp do_decode_response(responses) when is_list(responses) do
+    results = Enum.map(responses, &do_decode_response/1)
+
+    case Enum.split_with(results, &match?({:ok, _}, &1)) do
+      {successful, []} ->
+        {:ok, Enum.map(successful, fn {:ok, resp} -> resp end)}
+
+      {_, errors} ->
+        {:error, "invalid responses in batch: #{inspect(errors)}"}
+    end
+  end
+
+  defp do_decode_response(response) do
+    {:error, "invalid response: #{inspect(response)}"}
   end
 end
