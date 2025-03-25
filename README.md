@@ -20,7 +20,10 @@ Add `exth` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:exth, "~> 0.1.0"}
+    {:exth, "~> 0.1.0"},
+    # Optional dependencies:
+    # Mint for Tesla adapter
+    {:mint, "~> 1.7"}
   ]
 end
 ```
