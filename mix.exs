@@ -8,6 +8,8 @@ defmodule Exth.MixProject do
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      elixirc_paths: elixirc_paths(Mix.env()),
+      consolidate_protocols: Mix.env() != :test,
 
       # Docs
       name: "Exth",
@@ -22,6 +24,9 @@ defmodule Exth.MixProject do
       mod: {Exth.Application, []}
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   defp deps do
     [
