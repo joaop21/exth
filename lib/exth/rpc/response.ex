@@ -34,10 +34,10 @@ defmodule Exth.Rpc.Response do
   @type t :: Success.t() | Error.t()
 
   @spec success(Rpc.id(), String.t()) :: Success.t()
-  def success(id, result), do: %Success{id: id, result: result}
+  def success(id, result) when not is_nil(id), do: %Success{id: id, result: result}
 
   @spec error(Rpc.id(), integer(), String.t(), any() | nil) :: Error.t()
-  def error(id, code, message, data \\ nil) do
+  def error(id, code, message, data \\ nil) when not is_nil(id) do
     %Error{id: id, error: %{code: code, message: message, data: data}}
   end
 end
