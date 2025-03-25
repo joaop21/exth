@@ -1,11 +1,13 @@
 defmodule Exth.TestTransport do
   @moduledoc false
-  # Test transport implementation for transport tests
+
   defstruct [:config]
 
   @known_methods %{
     "eth_blockNumber" => "0x10",
     "eth_chainId" => "0x1",
+    "eth_gasPrice" => "0x1",
+    "eth_getBalance" => "0x1000",
     "net_version" => "1"
   }
 
@@ -20,5 +22,12 @@ defimpl Exth.Transport.Transportable, for: Exth.TestTransport do
       nil -> {:ok, Exth.Rpc.Response.error(id, -32601, "Method not found")}
       result -> {:ok, Exth.Rpc.Response.success(id, result)}
     end
+  end
+
+  def call(transport, requests) do
+    requests
+    |> Enum.map(&call(transport, &1))
+    |> Enum.map(fn {:ok, response} -> response end)
+    |> then(fn response -> {:ok, response} end)
   end
 end
