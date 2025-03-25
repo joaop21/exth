@@ -44,7 +44,7 @@ end
 {:ok, block_number} = MyClient.block_number()
 
 # Get balance for an address
-{:ok, balance} = MyClient.eth_get_balance(
+{:ok, balance} = MyClient.get_balance(
   "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
   "latest"
 )
