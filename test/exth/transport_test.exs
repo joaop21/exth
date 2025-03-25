@@ -1,5 +1,6 @@
 defmodule Exth.TransportTest do
   use ExUnit.Case, async: true
+
   doctest Exth.Transport
 
   alias Exth.Rpc.{Request, Response}
