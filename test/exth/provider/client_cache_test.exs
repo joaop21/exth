@@ -21,11 +21,13 @@ defmodule Exth.Provider.ClientCacheTest do
 
   use ExUnit.Case
 
+  import Exth.TestHelpers
+
   alias Exth.Provider.ClientCache
   alias Exth.Rpc.Client
   alias Exth.TestTransport
 
-  @test_url "https://eth-mainnet.example.com"
+  @test_url generate_rpc_url()
   @test_transport :http
 
   setup do
@@ -59,8 +61,8 @@ defmodule Exth.Provider.ClientCacheTest do
     end
 
     test "handles different URLs", %{client: client} do
-      url1 = "https://eth1.example.com"
-      url2 = "https://eth2.example.com"
+      url1 = generate_rpc_url()
+      url2 = generate_rpc_url()
 
       ClientCache.create_client(@test_transport, url1, client)
       assert {:ok, _} = ClientCache.get_client(@test_transport, url1)
@@ -87,8 +89,8 @@ defmodule Exth.Provider.ClientCacheTest do
     end
 
     test "caches multiple clients with different keys", %{client: client} do
-      url1 = "https://eth1.example.com"
-      url2 = "https://eth2.example.com"
+      url1 = generate_rpc_url()
+      url2 = generate_rpc_url()
 
       client1 = ClientCache.create_client(@test_transport, url1, client)
       client2 = ClientCache.create_client(@test_transport, url2, client)
