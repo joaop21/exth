@@ -28,36 +28,86 @@ def deps do
 end
 ```
 
-## Quick Start
+## Usage
 
-1. Define your client module:
+Exth offers two ways to interact with EVM nodes:
+
+1. **Provider** (High-Level): Define a provider module with convenient function
+   names and no need to pass client references.
+2. **Client** (Low-Level): Direct client usage with more control, requiring
+   explicit client handling.
+
+<!-- tabs-open -->
+
+### Provider (Recommended)
 
 ```elixir
-defmodule MyClient do
+defmodule MyProvider do
   use Exth.Provider,
     transport_type: :http,
     rpc_url: "https://YOUR-RPC-URL"
 end
-```
 
-2. Make RPC calls:
+{:ok, block_number} = MyProvider.block_number()
 
-```elixir
-# Get the latest block number
-{:ok, block_number} = MyClient.block_number()
-
-# Get balance for an address
-{:ok, balance} = MyClient.get_balance(
+{:ok, balance} = MyProvider.get_balance(
   "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
   "latest"
 )
 
-# Get block by number with full transactions
-{:ok, block} = MyClient.get_block_by_number("0x1", true)
+{:ok, block} = MyProvider.get_block_by_number("0x1", true)
 
-# Send raw transaction
-{:ok, tx_hash} = MyClient.send_raw_transaction("0x...")
+{:ok, tx_hash} = MyProvider.send_raw_transaction("0x...")
 ```
+
+The Provider approach is recommended for most use cases as it provides:
+
+- ✨ Clean, intuitive function names
+- 🔒 Type-safe parameters
+- 📝 Better documentation and IDE support
+- 🎯 No need to manage client references
+
+### Client
+
+```elixir
+alias Exth.Client
+
+# 1. Define a client
+{:ok, client} = Client.new(
+  transport_type: :http,
+  rpc_url: "https://YOUR-RPC-URL"
+)
+
+# 2. Make RPC calls with explicit client
+{:ok, block_number} = Client.request(client, "eth_blockNumber", [])
+
+{:ok, balance} = Client.request(
+  client,
+  "eth_getBalance",
+  ["0x742d35Cc6634C0532925a3b844Bc454e4438f44e", "latest"]
+)
+
+{:ok, block} = Client.request(
+  client,
+  "eth_getBlockByNumber",
+  ["0x1", true]
+)
+
+{:ok, tx_hash} = Client.request(
+  client,
+  "eth_sendRawTransaction",
+  ["0x..."]
+)
+```
+
+Use the Client approach when you need:
+
+- 🔧 Direct control over RPC calls
+- 🔄 Dynamic method names
+- 🛠️ Custom parameter handling
+- 🎛️ Flexible client management (multiple clients, runtime configuration)
+
+<!-- tabs-close -->
 
 ## Configuration
 
