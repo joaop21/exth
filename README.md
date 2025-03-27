@@ -109,40 +109,85 @@ Use the Client approach when you need:
 
 <!-- tabs-close -->
 
-## Configuration
+## Transport Options
 
-### Transport Options
+Exth uses a pluggable transport system that supports different communication
+protocols. Each transport type can be configured with specific options:
 
-```elixir
-# HTTP Transport
-config = [
-  transport_type: :http,
-  rpc_url: "https://eth-mainnet.example.com",
-  headers: [{"authorization", "Bearer token"}],
-  timeout: 30_000
-]
+<!-- tabs-open -->
 
-# Custom Transport
-config = [
-  transport_type: :custom,
-  rpc_url: "custom://endpoint",
-  module: MyCustomTransport
-]
-```
+### HTTP Transport
 
-### Client Options
+The default HTTP transport is built on Tesla, providing a robust HTTP client
+with middleware support:
 
 ```elixir
-defmodule MyClient do
+# Provider configuration
+defmodule MyProvider do
   use Exth.Provider,
     transport_type: :http,
     rpc_url: "https://eth-mainnet.example.com",
-    headers: [
-      {"authorization", "Bearer token"}
-    ],
-    timeout: 30_000
+    # Optional HTTP-specific configuration
+    adapter: Tesla.Adapter.Mint, # Default HTTP adapter
+    headers: [{"authorization", "Bearer token"}],
+    timeout: 30_000, # Request timeout in ms
+end
+
+# Direct client configuration
+{:ok, client} = Exth.Client.new(
+  transport_type: :http,
+  rpc_url: "https://eth-mainnet.example.com",
+  adapter: Tesla.Adapter.Mint,
+  headers: [{"authorization", "Bearer token"}],
+  timeout: 30_000
+)
+```
+
+- ✨ **HTTP** (`:http`)
+
+  - Built on Tesla HTTP client
+  - Configurable adapters (Mint, Hackney, etc.)
+  - Configurable headers and timeouts
+
+### Custom Transport
+
+Implement your own transport by creating a module and implementing the
+`Exth.Transport.Transportable` protocol:
+
+```elixir
+defmodule MyCustomTransport do
+  # Transport struct should be whatever you need
+  defstruct [:config]
+end
+
+defimpl Exth.Transport.Transportable, for: MyCustomTransport do
+  def new(transport, opts) do
+    # Initialize your transport configuration
+    %MyCustomTransport{config: opts}
+  end
+
+  def call(transport, request) do
+    # Handle the JSON-RPC request
+    # Return {:ok, response} or {:error, reason}
+  end
+end
+
+# Use your custom transport
+defmodule MyProvider do
+  use Exth.Provider,
+    transport_type: :custom,
+    module: MyCustomTransport,
+    rpc_url: "custom://endpoint",
+    # Additional custom options
+    custom_option: "value"
 end
 ```
+
+- 🔧 **Custom** (`:custom`)
+  - Full control over transport implementation
+  - Custom state management
+
+<!-- tabs-close -->
 
 ## Error Handling
 
