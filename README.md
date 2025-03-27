@@ -197,26 +197,6 @@ end
 
 <!-- tabs-close -->
 
-## Error Handling
-
-Exth provides detailed error information:
-
-```elixir
-case MyClient.get_balance("0x123...", "latest") do
-  {:ok, balance} ->
-    # Handle success
-    balance
-
-  {:error, %{code: code, message: msg}} ->
-    # Handle RPC error
-    Logger.error("RPC Error: #{code} - #{msg}")
-
-  {:error, reason} ->
-    # Handle other errors
-    Logger.error("Error: #{inspect(reason)}")
-end
-```
-
 ## Requirements
 
 - Elixir ~> 1.18
