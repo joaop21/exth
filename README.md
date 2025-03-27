@@ -181,6 +181,14 @@ defmodule MyProvider do
     # Additional custom options
     custom_option: "value"
 end
+
+# Direct client configuration
+{:ok, client} = Exth.Client.new(
+  transport_type: :custom,
+  rpc_url: "https://eth-mainnet.example.com",
+  module: MyCustomTransport,
+  custom_option: "value"
+)
 ```
 
 - 🔧 **Custom** (`:custom`)
