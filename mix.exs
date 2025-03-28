@@ -37,6 +37,7 @@ defmodule Exth.MixProject do
 
   defp deps do
     [
+      {:ex_check, "~> 0.16.0", only: :dev, runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:mint, "~> 1.7", optional: true, only: :dev},
       {:tesla, "~> 1.14"}
