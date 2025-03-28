@@ -38,7 +38,6 @@ defmodule Exth.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
-      {:jason, "~> 1.4"},
       {:mint, "~> 1.7", optional: true, only: :dev},
       {:tesla, "~> 1.14"}
     ]

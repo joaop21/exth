@@ -39,8 +39,8 @@ defmodule Exth.Rpc.Client do
     * `:transport_type` - Transport to use (`:http` or `:custom`)
     * `:timeout` - Request timeout in milliseconds
     * `:headers` - Additional HTTP headers (HTTP only)
-    * `:encoder` - Custom request encoder (defaults to Jason)
-    * `:decoder` - Custom response decoder (defaults to Jason)
+    * `:encoder` - Custom request encoder (defaults to JSON)
+    * `:decoder` - Custom response decoder (defaults to JSON)
 
   ## Request ID Generation
 

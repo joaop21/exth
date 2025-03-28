@@ -125,7 +125,7 @@ defmodule Exth.Rpc.Encoding do
 
   ## Implementation Notes
 
-    * Uses `Jason` for JSON encoding/decoding
+    * Uses elixir's `JSON` for JSON encoding/decoding
     * Automatically handles struct conversion
     * Preserves request IDs for correlation
     * Supports both single and batch operations
@@ -142,13 +142,13 @@ defmodule Exth.Rpc.Encoding do
   def encode_request(%Request{} = request) do
     request
     |> do_encode_request()
-    |> Jason.encode()
+    |> json_encode()
   end
 
   def encode_request(requests) when is_list(requests) do
     requests
     |> Enum.map(&do_encode_request/1)
-    |> Jason.encode()
+    |> json_encode()
   end
 
   defp do_encode_request(%Request{} = request), do: Map.from_struct(request)
@@ -156,7 +156,7 @@ defmodule Exth.Rpc.Encoding do
   @spec decode_response(String.t()) ::
           {:ok, Response.t() | [Response.t()]} | {:error, Exception.t()}
   def decode_response(json) do
-    with {:ok, response} <- Jason.decode(json) do
+    with {:ok, response} <- JSON.decode(json) do
       do_decode_response(response)
     end
   end
@@ -188,5 +188,14 @@ defmodule Exth.Rpc.Encoding do
 
   defp do_decode_response(response) do
     {:error, "invalid response: #{inspect(response)}"}
+  end
+
+  defp json_encode(data) do
+    try do
+      encoded = JSON.encode!(data)
+      {:ok, encoded}
+    rescue
+      _ -> {:error, "encoding of #{inspect(data)} failed"}
+    end
   end
 end
