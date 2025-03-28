@@ -11,8 +11,6 @@ defmodule Exth.Transport.Http do
       transport = Transportable.new(
         %Exth.Transport.Http{},
         rpc_url: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID",
-        encoder: &Jason.encode!/1,
-        decoder: &Jason.decode!/1
       )
 
       {:ok, response} = Transportable.call(transport, request)
@@ -143,7 +141,6 @@ defmodule Exth.Transport.Http do
     raise ArgumentError, """
     Invalid decoder: expected a function that takes 1 argument, got: #{inspect(decoder)}
     The decoder must be a function that accepts a JSON string and returns a term.
-    Example: &Jason.decode!/1
     """
   end
 
