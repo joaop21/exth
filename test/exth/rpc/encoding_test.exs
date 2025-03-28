@@ -323,7 +323,7 @@ defmodule Exth.Rpc.EncodingTest do
 
     test "handles invalid JSON" do
       json = "invalid json"
-      assert {:error, %Jason.DecodeError{}} = Encoding.decode_response(json)
+      assert {:error, {:invalid_byte, _, _}} = Encoding.decode_response(json)
     end
   end
 
