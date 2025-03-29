@@ -91,7 +91,7 @@ defmodule Exth.Transport.HttpTest do
     end
 
     test "accepts custom timeout", %{opts: base_opts} do
-      timeout = 5000
+      timeout = 5_000
       opts = Keyword.put(base_opts, :timeout, timeout)
       transport = Http.new(opts)
 
@@ -130,11 +130,11 @@ defmodule Exth.Transport.HttpTest do
 
     test "handles JSON-RPC error responses", %{transport: transport} do
       error_cases = [
-        {-32700, "Parse error"},
-        {-32600, "Invalid Request"},
-        {-32601, "Method not found"},
-        {-32602, "Invalid params"},
-        {-32603, "Internal error"}
+        {-32_700, "Parse error"},
+        {-32_600, "Invalid Request"},
+        {-32_601, "Method not found"},
+        {-32_602, "Invalid params"},
+        {-32_603, "Internal error"}
       ]
 
       for {code, message} <- error_cases do

@@ -1,7 +1,11 @@
 defmodule Exth.Rpc.Response do
+  @moduledoc false
+
   alias Exth.Rpc
 
   defmodule Success do
+    @moduledoc false
+
     @type t :: %__MODULE__{
             id: Rpc.id(),
             jsonrpc: Rpc.jsonrpc(),
@@ -15,6 +19,8 @@ defmodule Exth.Rpc.Response do
   end
 
   defmodule Error do
+    @moduledoc false
+
     @type t :: %__MODULE__{
             id: Rpc.id(),
             jsonrpc: Rpc.jsonrpc(),

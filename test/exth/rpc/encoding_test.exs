@@ -164,10 +164,10 @@ defmodule Exth.Rpc.EncodingTest do
 
     test "decodes error responses with different error codes" do
       test_cases = [
-        {-32700, "Parse error", nil},
-        {-32600, "Invalid Request", "additional info"},
-        {-32601, "Method not found", %{"details" => "more info"}},
-        {-32602, "Invalid params", [1, 2, 3]}
+        {-32_700, "Parse error", nil},
+        {-32_600, "Invalid Request", "additional info"},
+        {-32_601, "Method not found", %{"details" => "more info"}},
+        {-32_602, "Invalid params", [1, 2, 3]}
       ]
 
       for {code, message, data} <- test_cases do
@@ -217,7 +217,7 @@ defmodule Exth.Rpc.EncodingTest do
           %{"jsonrpc" => "2.0", "result" => "0x1", "id" => 1},
           %{
             "jsonrpc" => "2.0",
-            "error" => %{"code" => -32600, "message" => "Invalid Request"},
+            "error" => %{"code" => -32_600, "message" => "Invalid Request"},
             "id" => 2
           }
         ],
@@ -225,7 +225,7 @@ defmodule Exth.Rpc.EncodingTest do
           %{"jsonrpc" => "2.0", "result" => "0x1", "id" => 1},
           %{
             "jsonrpc" => "2.0",
-            "error" => %{"code" => -32600, "message" => "Invalid Request"},
+            "error" => %{"code" => -32_600, "message" => "Invalid Request"},
             "id" => 2
           },
           %{"jsonrpc" => "2.0", "result" => %{"key" => "value"}, "id" => 3}
@@ -279,7 +279,7 @@ defmodule Exth.Rpc.EncodingTest do
 
       assert {:ok, response} = Encoding.decode_response(json)
       assert %Response.Error{} = response
-      assert response.error.code == -32700
+      assert response.error.code == -32_700
       assert response.error.message == "Parse error"
       assert response.id == 1
       assert response.jsonrpc == "2.0"
@@ -311,7 +311,7 @@ defmodule Exth.Rpc.EncodingTest do
       assert response1.id == 1
 
       assert %Response.Error{} = response2
-      assert response2.error.code == -32700
+      assert response2.error.code == -32_700
       assert response2.error.message == "Parse error"
       assert response2.id == 2
     end

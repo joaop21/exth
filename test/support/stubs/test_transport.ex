@@ -19,7 +19,7 @@ defimpl Exth.Transport.Transportable, for: Exth.TestTransport do
 
   def call(_transport, %{method: method, id: id} = _request) do
     case Map.get(Exth.TestTransport.get_known_methods(), method) do
-      nil -> {:ok, Exth.Rpc.Response.error(id, -32601, "Method not found")}
+      nil -> {:ok, Exth.Rpc.Response.error(id, -32_601, "Method not found")}
       result -> {:ok, Exth.Rpc.Response.success(id, result)}
     end
   end

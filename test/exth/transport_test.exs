@@ -76,7 +76,7 @@ defmodule Exth.TransportTest do
     test "handles unknown methods", %{transport: transport} do
       request = Request.new("unknown_method", [], 1)
 
-      assert {:ok, %Response.Error{error: %{code: -32601}}} = Transport.call(transport, request)
+      assert {:ok, %Response.Error{error: %{code: -32_601}}} = Transport.call(transport, request)
     end
 
     test "preserves request ID in response", %{transport: transport} do

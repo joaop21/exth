@@ -38,7 +38,7 @@ defmodule Exth.Rpc.ResponseTest do
   describe "error/3,4" do
     test "creates an error response with required fields" do
       id = 1
-      code = -32600
+      code = -32_600
       message = "Invalid Request"
       response = Response.error(id, code, message)
 
@@ -52,7 +52,7 @@ defmodule Exth.Rpc.ResponseTest do
 
     test "creates an error response with optional data" do
       id = 1
-      code = -32600
+      code = -32_600
       message = "Invalid Request"
       data = %{details: "Missing required field"}
       response = Response.error(id, code, message, data)
@@ -66,9 +66,9 @@ defmodule Exth.Rpc.ResponseTest do
 
     test "handles different id and data types" do
       test_cases = [
-        {1, -32600, "error", nil},
-        {"1", -32601, "error", "details"},
-        {"abc", -32603, "error", ["detail1", "detail2"]}
+        {1, -32_600, "error", nil},
+        {"1", -32_601, "error", "details"},
+        {"abc", -32_603, "error", ["detail1", "detail2"]}
       ]
 
       for {id, code, message, data} <- test_cases do
@@ -83,7 +83,7 @@ defmodule Exth.Rpc.ResponseTest do
 
     test "raises when id is nil" do
       assert_raise FunctionClauseError, fn ->
-        Response.error(nil, -32602, "error", %{reason: "invalid"})
+        Response.error(nil, -32_602, "error", %{reason: "invalid"})
       end
     end
   end
