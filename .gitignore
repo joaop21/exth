@@ -24,3 +24,7 @@ exth-*.tar
 
 # Ignore LSP files
 /.elixir_ls/
+
+# dialyzer
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
