@@ -94,11 +94,11 @@ defmodule Exth.Rpc.Client do
   See `Exth.Transport` for transport details and `Exth.Rpc.Request`
   for request formatting.
   """
-  alias Exth.Transport
   alias Exth.Rpc
   alias Exth.Rpc.Encoding
   alias Exth.Rpc.Request
   alias Exth.Rpc.Response
+  alias Exth.Transport
   alias Exth.Transport.Transportable
 
   @transport_types [:http, :custom]

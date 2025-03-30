@@ -1,4 +1,6 @@
 defmodule Exth.Rpc.Request do
+  @moduledoc false
+
   alias Exth.Rpc
 
   @type t :: %__MODULE__{

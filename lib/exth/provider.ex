@@ -158,10 +158,10 @@ defmodule Exth.Provider do
   """
   defmacro generate_provider(opts) do
     quote bind_quoted: [opts: opts] do
-      alias Exth.Rpc
-      alias Exth.Rpc.Response
       alias Exth.Provider.ClientCache
       alias Exth.Provider.Methods
+      alias Exth.Rpc
+      alias Exth.Rpc.Response
 
       @type rpc_response :: {:ok, term()} | {:error, term()}
 
@@ -243,7 +243,7 @@ defmodule Exth.Provider do
       This caching mechanism helps reduce connection overhead and
       maintain connection pooling efficiency.
       """
-      def get_client() do
+      def get_client do
         transport_type = Keyword.fetch!(@provider_opts, :transport_type)
         rpc_url = Keyword.fetch!(@provider_opts, :rpc_url)
 

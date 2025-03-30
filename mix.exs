@@ -12,6 +12,7 @@ defmodule Exth.MixProject do
       deps: deps(),
       elixirc_paths: elixirc_paths(Mix.env()),
       consolidate_protocols: Mix.env() != :test,
+      dialyzer: dialyzer(),
 
       # Package
       version: @version,
@@ -37,9 +38,16 @@ defmodule Exth.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:mint, "~> 1.7", optional: true, only: :dev},
-      {:tesla, "~> 1.14"}
+      # HTTP
+      {:tesla, "~> 1.14"},
+
+      # ex_check
+      {:ex_check, "~> 0.16.0", only: :dev, runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev], runtime: false}
     ]
   end
 
@@ -73,6 +81,12 @@ defmodule Exth.MixProject do
         Exth.Rpc,
         Exth.Transport
       ]
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_file: {:no_warn, "priv/plts/project.plt"}
     ]
   end
 end

@@ -4,8 +4,8 @@ defmodule Exth.Rpc.ClientTest do
   alias Exth.Rpc.Client
   alias Exth.Rpc.Request
   alias Exth.Rpc.Response
-  alias Exth.Transport.Http
   alias Exth.TestTransport
+  alias Exth.Transport.Http
   alias Exth.TransportErrorTestTransport
 
   @valid_url "http://localhost:8545"
@@ -123,7 +123,7 @@ defmodule Exth.Rpc.ClientTest do
       request = Client.request(client, "invalid_method", [])
       assert {:ok, response} = Client.send(client, request)
       assert %Response.Error{} = response
-      assert response.error.code == -32601
+      assert response.error.code == -32_601
       assert response.error.message == "Method not found"
     end
 
@@ -183,7 +183,7 @@ defmodule Exth.Rpc.ClientTest do
       assert success.id == hd(requests).id
 
       assert %Response.Error{} = error
-      assert error.error.code == -32601
+      assert error.error.code == -32_601
       assert error.error.message == "Method not found"
       assert error.id == List.last(requests).id
     end
