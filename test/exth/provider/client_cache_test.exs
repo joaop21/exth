@@ -4,14 +4,14 @@ defmodule Exth.Provider.ClientCacheTest do
   # We can't use async: true because we're using :persistent_term
   # which is a global shared storage in the Erlang VM.
   # When tests run asynchronously (async: true), multiple tests run in parallel
-  # in different processes. This could cause race conditions and inconsistent 
+  # in different processes. This could cause race conditions and inconsistent
   # test results because:
-  # 1. Multiple tests would be reading/writing to the same global 
+  # 1. Multiple tests would be reading/writing to the same global
   # `:persistent_term` storage
-  # 2. The `setup` block that erases the persistent term 
+  # 2. The `setup` block that erases the persistent term
   # (`:persistent_term.erase({ClientCache, @test_transport, @test_url})`) could
   # interfere with other concurrent tests
-  # 3. Tests like "cache persistence" that verify behavior across process 
+  # 3. Tests like "cache persistence" that verify behavior across process
   # boundaries could be affected by other tests modifying the same global state
   #
   # For example, if these tests ran in parallel:

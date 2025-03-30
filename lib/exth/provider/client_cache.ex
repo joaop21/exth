@@ -147,13 +147,11 @@ defmodule Exth.Provider.ClientCache do
   @spec get_client(Exth.Transport.type(), String.t()) ::
           {:ok, Client.t()} | {:error, :not_found}
   def get_client(transport_type, rpc_url) do
-    try do
-      %Client{} = client = :persistent_term.get(build_key(transport_type, rpc_url))
-      {:ok, client}
-    rescue
-      ArgumentError ->
-        {:error, :not_found}
-    end
+    %Client{} = client = :persistent_term.get(build_key(transport_type, rpc_url))
+    {:ok, client}
+  rescue
+    ArgumentError ->
+      {:error, :not_found}
   end
 
   @doc """

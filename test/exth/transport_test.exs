@@ -4,9 +4,9 @@ defmodule Exth.TransportTest do
   doctest Exth.Transport
 
   alias Exth.Rpc.{Request, Response}
+  alias Exth.TestTransport
   alias Exth.Transport
   alias Exth.Transport.Http
-  alias Exth.TestTransport
   alias Exth.TransportFixtures
 
   import TransportFixtures

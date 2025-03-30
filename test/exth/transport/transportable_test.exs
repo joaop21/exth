@@ -1,8 +1,8 @@
 defmodule Exth.Transport.TransportableTest do
   use ExUnit.Case, async: true
 
-  alias Exth.Transport.Transportable
   alias Exth.Rpc.Request
+  alias Exth.Transport.Transportable
 
   @error_message ~r/protocol Exth.Transport.Transportable not implemented/
 

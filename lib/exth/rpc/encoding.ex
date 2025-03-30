@@ -135,8 +135,8 @@ defmodule Exth.Rpc.Encoding do
   `Exth.Rpc.Response` for response handling.
   """
 
-  alias Exth.Rpc.Response
   alias Exth.Rpc.Request
+  alias Exth.Rpc.Response
 
   @spec encode_request(Request.t() | [Request.t()]) :: {:ok, String.t()} | {:error, Exception.t()}
   def encode_request(%Request{} = request) do
@@ -191,11 +191,9 @@ defmodule Exth.Rpc.Encoding do
   end
 
   defp json_encode(data) do
-    try do
-      encoded = JSON.encode!(data)
-      {:ok, encoded}
-    rescue
-      _ -> {:error, "encoding of #{inspect(data)} failed"}
-    end
+    encoded = JSON.encode!(data)
+    {:ok, encoded}
+  rescue
+    _ -> {:error, "encoding of #{inspect(data)} failed"}
   end
 end

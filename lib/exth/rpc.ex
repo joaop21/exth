@@ -29,7 +29,7 @@ defmodule Exth.Rpc do
   Returns the JSON-RPC protocol version used by the client.
   """
   @spec jsonrpc_version() :: jsonrpc()
-  def jsonrpc_version(), do: @jsonrpc_version
+  def jsonrpc_version, do: @jsonrpc_version
 
   @doc """
   Creates a new JSON-RPC client with the specified transport type and options.

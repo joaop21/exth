@@ -3,9 +3,9 @@ defmodule Exth.Transport.HttpTest do
 
   import Exth.TransportFixtures
 
-  alias Exth.Transport.Http
   alias Exth.Rpc.Request
   alias Exth.Rpc.Response
+  alias Exth.Transport.Http
   alias Tesla.Mock, as: MockAdapter
 
   @valid_json_headers [{"content-type", "application/json"}]

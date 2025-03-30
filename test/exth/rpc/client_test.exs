@@ -4,8 +4,8 @@ defmodule Exth.Rpc.ClientTest do
   alias Exth.Rpc.Client
   alias Exth.Rpc.Request
   alias Exth.Rpc.Response
-  alias Exth.Transport.Http
   alias Exth.TestTransport
+  alias Exth.Transport.Http
   alias Exth.TransportErrorTestTransport
 
   @valid_url "http://localhost:8545"
