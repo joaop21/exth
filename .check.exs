@@ -20,7 +20,7 @@
     # {:sobelow, "mix sobelow --exit --skip"},
 
     ## ...or reordered (e.g. to see output from dialyzer before others)
-    # {:dialyzer, order: -1},
+    {:dialyzer, "mix dialyzer --format github --format dialyxir"},
 
     ## ...or reconfigured (e.g. disable parallel execution of ex_unit in umbrella)
     # {:ex_unit, umbrella: [parallel: false]},
