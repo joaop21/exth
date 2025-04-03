@@ -205,10 +205,10 @@ defmodule Exth.Provider do
               ) :: rpc_response()
         def unquote(method_name)(unquote_splicing(function_params)) do
           client = get_client()
-          request = Rpc.request(client, unquote(rpc_method), [unquote_splicing(request_params)])
 
-          client
-          |> Rpc.send(request)
+          unquote(rpc_method)
+          |> Rpc.request([unquote_splicing(request_params)])
+          |> Rpc.send(client)
           |> handle_response()
         end
       end
@@ -243,6 +243,7 @@ defmodule Exth.Provider do
       This caching mechanism helps reduce connection overhead and
       maintain connection pooling efficiency.
       """
+      @spec get_client() :: Rpc.Client.t()
       def get_client do
         transport_type = Keyword.fetch!(@provider_opts, :transport_type)
         rpc_url = Keyword.fetch!(@provider_opts, :rpc_url)
