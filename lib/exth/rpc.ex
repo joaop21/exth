@@ -69,6 +69,21 @@ defmodule Exth.Rpc do
   defdelegate request(client, method, params), to: Client
 
   @doc """
+  Builds a new JSON-RPC request for the given method and parameters.
+
+  The request will automatically:
+    * Set the protocol version to "2.0"
+    * Format parameters according to the JSON-RPC spec
+
+  ## Examples
+
+      request = Rpc.request("eth_blockNumber", [])
+      request = Rpc.request("eth_getBalance", ["0x742d...", "latest"])
+  """
+  @spec request(method(), params(), id()) :: Request.t()
+  defdelegate request(method, params), to: Client
+
+  @doc """
   Sends a JSON-RPC request using the client's configured transport.
   Supports both single requests and batch requests.
 
@@ -88,7 +103,7 @@ defmodule Exth.Rpc do
       # Error handling
       {:error, reason} = Rpc.send(client, bad_request)
   """
-  @spec send(Client.t(), Request.t() | [Request.t()]) ::
+  @spec send(Client.t() | Request.t() | [Request.t()], Client.t() | Request.t() | [Request.t()]) ::
           {:ok, Response.t() | [Response.t()]} | {:error, Exception.t()}
   defdelegate send(client, request), to: Client
 end
