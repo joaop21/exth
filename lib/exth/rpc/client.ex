@@ -133,12 +133,36 @@ defmodule Exth.Rpc.Client do
   @spec request(t(), Rpc.method(), Rpc.params()) :: Request.t()
   def request(%__MODULE__{} = client, method, params)
       when is_binary(method) or is_atom(method) do
-    id = :atomics.add_get(client.counter, 1, 1)
+    id = next_id(client)
     Request.new(method, params, id)
   end
 
-  @spec send(t(), Request.t() | [Request.t()]) :: {:ok, Response.t()} | {:error, Exception.t()}
-  def send(%__MODULE__{} = client, request) do
+  @spec request(Rpc.method(), Rpc.params()) :: Request.t()
+  def request(method, params) do
+    Request.new(method, params)
+  end
+
+  @spec send(t() | Request.t() | [Request.t()], t() | Request.t() | [Request.t()]) ::
+          {:ok, Response.t()} | {:error, Exception.t()}
+  def send(%__MODULE__{} = client, %Request{id: nil} = request) do
+    request = %Request{request | id: next_id(client)}
+    __MODULE__.send(client, request)
+  end
+
+  def send(%Request{id: nil} = request, %__MODULE__{} = client) do
+    request = %Request{request | id: next_id(client)}
+    __MODULE__.send(client, request)
+  end
+
+  def send(%__MODULE__{} = client, %Request{} = request) do
     Transport.call(client.transport, request)
+  end
+
+  def send(%Request{} = request, %__MODULE__{} = client) do
+    Transport.call(client.transport, request)
+  end
+
+  defp next_id(%__MODULE__{counter: counter}) do
+    :atomics.add_get(counter, 1, 1)
   end
 end
