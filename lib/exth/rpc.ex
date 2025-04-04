@@ -75,12 +75,11 @@ defmodule Exth.Rpc do
 
   alias __MODULE__.Client
   alias __MODULE__.Request
-  alias __MODULE__.Response
   alias Exth.Transport
 
   @type id :: pos_integer()
   @type jsonrpc :: String.t()
-  @type method :: String.t()
+  @type method :: atom() | String.t()
   @type params :: list(binary())
 
   @jsonrpc_version "2.0"
@@ -215,7 +214,7 @@ defmodule Exth.Rpc do
         {:error, %Exception{} = e} -> handle_transport_error(e)
       end
   """
-  @spec send(Client.t() | Request.t() | [Request.t()], Client.t() | Request.t() | [Request.t()]) ::
-          {:ok, Response.t() | [Response.t()]} | {:error, Exception.t()}
+  @spec send(Client.send_argument_type(), Client.send_argument_type()) ::
+          Client.send_response_type()
   defdelegate send(arg1, arg2), to: Client
 end

@@ -97,7 +97,6 @@ defmodule Exth.Rpc.Client do
   alias Exth.Rpc
   alias Exth.Rpc.Encoding
   alias Exth.Rpc.Request
-  alias Exth.Rpc.Response
   alias Exth.Transport
   alias Exth.Transport.Transportable
 
@@ -142,8 +141,10 @@ defmodule Exth.Rpc.Client do
     Request.new(method, params)
   end
 
-  @spec send(t() | Request.t() | [Request.t()] | [], t() | Request.t() | [Request.t()] | []) ::
-          {:ok, Response.t()} | {:error, Exception.t() | :duplicate_ids}
+  @type send_argument_type :: t() | Request.t() | [Request.t()] | []
+  @type send_response_type :: Transport.call_response() | {:error, :duplicate_ids}
+
+  @spec send(send_argument_type(), send_argument_type()) :: send_response_type()
   def send(%__MODULE__{} = client, %Request{} = request) do
     send_single(client, request)
   end
