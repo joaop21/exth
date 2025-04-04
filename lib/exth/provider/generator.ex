@@ -152,9 +152,10 @@ defmodule Exth.Provider.Generator do
 
   defmacro generate_handle_response do
     quote do
+      @spec handle_response(Rpc.Client.send_response_type()) ::
+              {:ok, term()} | {:error, term()}
       defp handle_response({:ok, %Response.Success{} = response}), do: {:ok, response.result}
       defp handle_response({:ok, %Response.Error{} = response}), do: {:error, response.error}
-      defp handle_response({:error, reason} = response) when is_binary(reason), do: response
       defp handle_response({:error, reason}), do: {:error, inspect(reason)}
     end
   end
