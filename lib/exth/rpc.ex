@@ -217,5 +217,5 @@ defmodule Exth.Rpc do
   """
   @spec send(Client.t() | Request.t() | [Request.t()], Client.t() | Request.t() | [Request.t()]) ::
           {:ok, Response.t() | [Response.t()]} | {:error, Exception.t()}
-  defdelegate send(client, request), to: Client
+  defdelegate send(arg1, arg2), to: Client
 end

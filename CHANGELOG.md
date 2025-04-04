@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.2.0 - 2025-04-04
+
+### Added
+
+- Documentation for `Exth.Rpc.Request` and `Exth.Rpc.Response` structs
+- Allow inverting arguments order on `Exth.Rpc.send/2` and `Exth.Rpc.Client.send/2`
+  - This change allows for more flexible usage patterns (pipes)
+- Creation of request IDs on `Exth.Rpc.Client.send/2` when no pre-assigned IDs
+  are provided
+- Creation of requests with no pre-assigned IDs with `Exth.Rpc.request/2` and
+  `Exth.Rpc.Client.request/2`
+
+### Changed
+
+- Replaced `Jason` with `JSON` for JSON encoding/decoding
+- Updated `README.md` for documentation purposes
+- Updated `Exth.Rpc.Client` documentation
+
+[0.2.0]: https://github.com/joaop21/exth/releases/tag/v0.2.0
+
 ## [0.1.1] - 2024-03-27
 
 ### Changed
