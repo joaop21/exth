@@ -101,6 +101,39 @@ defmodule Exth.Rpc.ClientTest do
     end
   end
 
+  describe "request/2" do
+    test "creates a request with string method" do
+      request = Client.request("eth_blockNumber", [])
+      assert %Request{} = request
+      assert request.method == "eth_blockNumber"
+      assert request.params == []
+      assert is_nil(request.id)
+      assert request.jsonrpc == "2.0"
+    end
+
+    test "creates a request with atom method" do
+      request = Client.request(:eth_blockNumber, [])
+      assert %Request{} = request
+      assert request.method == :eth_blockNumber
+      assert request.params == []
+      assert is_nil(request.id)
+      assert request.jsonrpc == "2.0"
+    end
+
+    test "handles various parameter types" do
+      params = [
+        "0x123",
+        123,
+        true,
+        %{key: "value"},
+        ["0x456", false]
+      ]
+
+      request = Client.request("eth_call", params)
+      assert request.params == params
+    end
+  end
+
   describe "send/2" do
     setup do
       client = Client.new(:custom, module: TestTransport, rpc_url: @valid_url)
@@ -193,11 +226,11 @@ defmodule Exth.Rpc.ClientTest do
     end
 
     test "validates request input", %{client: client} do
-      assert_raise Protocol.UndefinedError, fn ->
+      assert_raise FunctionClauseError, fn ->
         Client.send(client, nil)
       end
 
-      assert_raise Protocol.UndefinedError, fn ->
+      assert_raise FunctionClauseError, fn ->
         Client.send(client, "not_a_request")
       end
     end
