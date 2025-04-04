@@ -78,26 +78,28 @@ alias Exth.Client
   rpc_url: "https://YOUR-RPC-URL"
 )
 
-# 2. Make RPC calls with explicit client
-{:ok, block_number} = Client.request(client, "eth_blockNumber", [])
+# 2.1. Make RPC calls with explicit client
+request1 = Client.request(client, "eth_blockNumber", [])
+{:ok, block_number} = Client.send(client, request1)
 
-{:ok, balance} = Client.request(
-  client,
+# 2.2. Or make RPC calls without a client
+request2 = Client.request(
   "eth_getBalance",
   ["0x742d35Cc6634C0532925a3b844Bc454e4438f44e", "latest"]
 )
+{:ok, balance} = Client.send(client, request2)
 
-{:ok, block} = Client.request(
-  client,
-  "eth_getBlockByNumber",
-  ["0x1", true]
-)
+# 3. You can also send multiple requests in one call
+requests = [request1, request2]
+{:ok, responses} = Client.send(client, requests)
 
-{:ok, tx_hash} = Client.request(
-  client,
-  "eth_sendRawTransaction",
-  ["0x..."]
-)
+# 4. You can invert the order of the arguments and pipe
+Client.request("eth_blockNumber", [])
+|> Client.send(client)
+
+# OR
+[request1, request2]
+|> Client.send(client)
 ```
 
 Use the Client approach when you need:
