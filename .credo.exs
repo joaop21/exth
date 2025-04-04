@@ -86,7 +86,7 @@
           ### Remove max_complexity: 12 when we have time to refactor
           ### Default is 9
           ###
-          {Credo.Check.Refactor.CyclomaticComplexity, [max_complexity: 12]},
+          {Credo.Check.Refactor.CyclomaticComplexity},
           {Credo.Check.Refactor.FilterCount, []},
           {Credo.Check.Refactor.FilterFilter, []},
           {Credo.Check.Refactor.FunctionArity, []},
