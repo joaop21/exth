@@ -1,5 +1,23 @@
 defmodule Exth.Rpc.Request do
-  @moduledoc false
+  @moduledoc """
+  Represents a JSON-RPC request with validation.
+
+  A request consists of:
+    * `method` - The RPC method name (string or atom)
+    * `params` - List of parameters for the method
+    * `id` - Optional positive integer for request identification
+    * `jsonrpc` - JSON-RPC version (defaults to "2.0")
+
+  ## Example
+
+      iex> Request.new("eth_getBalance", ["0x742d35Cc6634C0532925a3b844Bc454e4438f44e", "latest"])
+      %Request{
+        method: "eth_getBalance",
+        params: ["0x742d35Cc6634C0532925a3b844Bc454e4438f44e", "latest"],
+        id: nil,
+        jsonrpc: "2.0"
+      }
+  """
 
   alias Exth.Rpc
 
