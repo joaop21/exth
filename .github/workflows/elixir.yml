@@ -5,6 +5,8 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -118,3 +120,10 @@ jobs:
       # Step: Execute the tests.
       - name: Run check
         run: mix check
+
+      # Step: Publish package to Hex.pm if the event is a release
+      - name: New git release triggers the publishing of new package to Hex.pm
+        if: github.event_name == 'release'
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+        run: mix hex.publish --yes
