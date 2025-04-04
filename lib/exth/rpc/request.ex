@@ -11,17 +11,20 @@ defmodule Exth.Rpc.Request do
         }
 
   defstruct [
-    :id,
     :method,
+    id: nil,
     params: [],
     jsonrpc: Rpc.jsonrpc_version()
   ]
 
-  @spec new(Rpc.method(), Rpc.params(), Rpc.id()) :: t()
-  def new(method, params, id) do
+  @spec new(Rpc.method(), Rpc.params(), Rpc.id() | nil) :: t()
+  def new(method, params, id \\ nil) do
     validate_method(method)
     validate_params(params)
-    validate_id(id)
+
+    if not is_nil(id) do
+      validate_id(id)
+    end
 
     %__MODULE__{
       method: method,

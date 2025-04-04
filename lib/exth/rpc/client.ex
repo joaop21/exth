@@ -133,12 +133,87 @@ defmodule Exth.Rpc.Client do
   @spec request(t(), Rpc.method(), Rpc.params()) :: Request.t()
   def request(%__MODULE__{} = client, method, params)
       when is_binary(method) or is_atom(method) do
-    id = :atomics.add_get(client.counter, 1, 1)
+    id = generate_id(client)
     Request.new(method, params, id)
   end
 
-  @spec send(t(), Request.t() | [Request.t()]) :: {:ok, Response.t()} | {:error, Exception.t()}
-  def send(%__MODULE__{} = client, request) do
+  @spec request(Rpc.method(), Rpc.params()) :: Request.t()
+  def request(method, params) do
+    Request.new(method, params)
+  end
+
+  @spec send(t() | Request.t() | [Request.t()] | [], t() | Request.t() | [Request.t()] | []) ::
+          {:ok, Response.t()} | {:error, Exception.t() | :duplicate_ids}
+  def send(%__MODULE__{} = client, %Request{} = request) do
+    send_single(client, request)
+  end
+
+  def send(%Request{} = request, %__MODULE__{} = client) do
+    send_single(client, request)
+  end
+
+  def send(%__MODULE__{} = client, requests) when is_list(requests) do
+    send_batch(client, requests)
+  end
+
+  def send(requests, %__MODULE__{} = client) when is_list(requests) do
+    send_batch(client, requests)
+  end
+
+  ###
+  ### Private Functions
+  ###
+
+  defp send_single(%__MODULE__{} = client, %Request{} = request) do
+    request =
+      if is_nil(request.id) do
+        %Request{request | id: generate_id(client)}
+      else
+        request
+      end
+
     Transport.call(client.transport, request)
+  end
+
+  defp send_batch(%__MODULE__{}, []), do: {:ok, []}
+
+  defp send_batch(%__MODULE__{} = client, requests) do
+    with :ok <- validate_unique_ids(requests) do
+      requests = assign_missing_ids(client, requests)
+      Transport.call(client.transport, requests)
+    end
+  end
+
+  defp validate_unique_ids(requests) do
+    existing_ids = requests |> Enum.map(& &1.id) |> Enum.reject(&is_nil/1)
+
+    if length(existing_ids) == length(Enum.uniq(existing_ids)) do
+      :ok
+    else
+      {:error, :duplicate_ids}
+    end
+  end
+
+  defp assign_missing_ids(client, requests) do
+    existing_ids = MapSet.new(requests, & &1.id)
+
+    Enum.map(requests, fn request ->
+      if is_nil(request.id) do
+        %Request{request | id: generate_unique_id(client, existing_ids)}
+      else
+        request
+      end
+    end)
+  end
+
+  defp generate_unique_id(client, existing_ids) do
+    client
+    |> generate_id()
+    |> Stream.iterate(fn _ -> generate_id(client) end)
+    |> Enum.find(fn id -> not MapSet.member?(existing_ids, id) end)
+  end
+
+  defp generate_id(%__MODULE__{counter: counter}) do
+    :atomics.add_get(counter, 1, 1)
   end
 end

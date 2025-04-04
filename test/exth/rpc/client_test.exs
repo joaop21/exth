@@ -101,10 +101,111 @@ defmodule Exth.Rpc.ClientTest do
     end
   end
 
+  describe "request/2" do
+    test "creates a request with string method" do
+      request = Client.request("eth_blockNumber", [])
+      assert %Request{} = request
+      assert request.method == "eth_blockNumber"
+      assert request.params == []
+      assert is_nil(request.id)
+      assert request.jsonrpc == "2.0"
+    end
+
+    test "creates a request with atom method" do
+      request = Client.request(:eth_blockNumber, [])
+      assert %Request{} = request
+      assert request.method == :eth_blockNumber
+      assert request.params == []
+      assert is_nil(request.id)
+      assert request.jsonrpc == "2.0"
+    end
+
+    test "handles various parameter types" do
+      params = [
+        "0x123",
+        123,
+        true,
+        %{key: "value"},
+        ["0x456", false]
+      ]
+
+      request = Client.request("eth_call", params)
+      assert request.params == params
+    end
+  end
+
   describe "send/2" do
     setup do
       client = Client.new(:custom, module: TestTransport, rpc_url: @valid_url)
       {:ok, client: client}
+    end
+
+    test "accepts request first, client second", %{client: client} do
+      request = Client.request("eth_blockNumber", [])
+      assert {:ok, response} = Client.send(request, client)
+      assert %Response.Success{} = response
+      assert response.result =~ ~r/^0x[0-9a-f]+$/
+      assert is_integer(response.id)
+    end
+
+    test "accepts requests list first, client second", %{client: client} do
+      requests = [
+        Client.request("eth_blockNumber", []),
+        Client.request("eth_chainId", [])
+      ]
+
+      assert {:ok, responses} = Client.send(requests, client)
+      assert length(responses) == 2
+      assert Enum.all?(responses, &match?(%Response.Success{}, &1))
+    end
+
+    test "handles batch requests with pre-assigned IDs", %{client: client} do
+      requests = [
+        %Request{Client.request("eth_blockNumber", []) | id: 42},
+        %Request{Client.request("eth_chainId", []) | id: 43}
+      ]
+
+      assert {:ok, responses} = Client.send(client, requests)
+      assert length(responses) == 2
+      assert Enum.map(responses, & &1.id) == [42, 43]
+    end
+
+    test "detects duplicate IDs in batch requests", %{client: client} do
+      requests = [
+        %Request{Client.request("eth_blockNumber", []) | id: 42},
+        %Request{Client.request("eth_chainId", []) | id: 42}
+      ]
+
+      assert {:error, :duplicate_ids} = Client.send(client, requests)
+    end
+
+    test "assigns unique IDs to nil ID requests in batch", %{client: client} do
+      requests = [
+        Client.request("eth_blockNumber", []),
+        Client.request("eth_chainId", []),
+        %Request{Client.request("eth_gasPrice", []) | id: 42}
+      ]
+
+      assert {:ok, responses} = Client.send(client, requests)
+
+      ids = Enum.map(responses, & &1.id)
+      assert length(Enum.uniq(ids)) == 3
+      assert 42 in ids
+    end
+
+    test "preserves existing IDs while assigning new ones in batch", %{client: client} do
+      requests = [
+        %Request{Client.request("eth_blockNumber", []) | id: 42},
+        Client.request("eth_chainId", []),
+        Client.request("eth_gasPrice", [])
+      ]
+
+      assert {:ok, responses} = Client.send(client, requests)
+
+      ids = Enum.map(responses, & &1.id)
+      assert length(Enum.uniq(ids)) == 3
+      assert 42 in ids
+      assert Enum.all?(ids -- [42], &(&1 != 42))
     end
 
     test "sends single requests successfully", %{client: client} do
@@ -193,11 +294,11 @@ defmodule Exth.Rpc.ClientTest do
     end
 
     test "validates request input", %{client: client} do
-      assert_raise Protocol.UndefinedError, fn ->
+      assert_raise FunctionClauseError, fn ->
         Client.send(client, nil)
       end
 
-      assert_raise Protocol.UndefinedError, fn ->
+      assert_raise FunctionClauseError, fn ->
         Client.send(client, "not_a_request")
       end
     end
