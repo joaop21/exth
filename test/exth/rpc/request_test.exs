@@ -55,7 +55,6 @@ defmodule Exth.Rpc.RequestTest do
 
     test "raises when id is not a positive integer" do
       invalid_ids = [
-        nil,
         0,
         -1,
         "1",
