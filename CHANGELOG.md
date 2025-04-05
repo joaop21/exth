@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `Exth.Provider` was refactored to reduce its complexity
 - Fixed dialyzer warnings on `Exth.Provider` related to `has no local return`.
-  Some types were fixed and everything is now working as expected. No more
-  warnings when defining providers.
+  Some types were fixed and the dialyzer warning does not appear anymore. No
+  more warnings when defining providers.
 
 [0.2.1]: https://github.com/joaop21/exth/releases/tag/v0.2.1
 
