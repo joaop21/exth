@@ -10,7 +10,6 @@ defmodule Exth.Transport do
     * Pluggable transport system via the `Transportable` protocol
     * Built-in HTTP transport with Tesla/Mint
     * Consistent interface across transport types
-    * Automatic request/response encoding/decoding
     * Configurable timeout and retry mechanisms
     * Transport-specific option handling
 
@@ -42,7 +41,6 @@ defmodule Exth.Transport do
   Common options for all transports:
 
     * `:rpc_url` - (Required) The endpoint URL
-    * `:decoder` - (Required) Function to decode JSON responses
 
   HTTP-specific options:
 
@@ -123,7 +121,6 @@ defmodule Exth.Transport do
   """
   @type options :: [
           rpc_url: String.t(),
-          decoder: (String.t() -> term),
           module: module() | nil
         ]
 
@@ -152,7 +149,6 @@ defmodule Exth.Transport do
 
   defp validate_opts(opts) do
     opts[:rpc_url] || raise ArgumentError, "missing required option :rpc_url"
-    opts[:decoder] || raise ArgumentError, "missing required option :decoder"
   end
 
   defp get_transport_module(:http, _opts), do: __MODULE__.Http

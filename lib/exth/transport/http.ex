@@ -53,7 +53,6 @@ defmodule Exth.Transport.Http do
 
   ## Options
     * `:rpc_url` - (required) The HTTP/HTTPS endpoint URL
-    * `:decoder` - (required) Function to decode responses
     * `:adapter` - Tesla adapter to use (defaults to `Tesla.Adapter.Mint`)
     * `:headers` - Additional HTTP headers for requests
     * `:timeout` - Request timeout in milliseconds (defaults to 30000)
@@ -61,8 +60,7 @@ defmodule Exth.Transport.Http do
   @spec new(keyword()) :: t()
   def new(opts) do
     with {:ok, rpc_url} <- validate_required_url(opts[:rpc_url]),
-         :ok <- validate_url_format(rpc_url),
-         :ok <- validate_required_decoder(opts[:decoder]) do
+         :ok <- validate_url_format(rpc_url) do
       build_client(opts, rpc_url)
     end
   end
@@ -72,8 +70,7 @@ defmodule Exth.Transport.Http do
       build_middleware(
         rpc_url: rpc_url,
         headers: opts[:headers],
-        timeout: opts[:timeout] || @default_timeout,
-        decoder: opts[:decoder]
+        timeout: opts[:timeout] || @default_timeout
       )
 
     adapter = opts[:adapter] || @adapter
@@ -87,7 +84,7 @@ defmodule Exth.Transport.Http do
     [
       {Tesla.Middleware.BaseUrl, config[:rpc_url]},
       {Tesla.Middleware.Headers, build_headers(config[:headers])},
-      {Tesla.Middleware.JSON, encode: &Request.serialize/1, decode: config[:decoder]},
+      {Tesla.Middleware.JSON, encode: &Request.serialize/1, decode: &Response.deserialize/1},
       {Tesla.Middleware.Timeout, timeout: config[:timeout]}
     ]
   end
@@ -115,19 +112,6 @@ defmodule Exth.Transport.Http do
           - Contain a valid host
         """
     end
-  end
-
-  defp validate_required_decoder(nil) do
-    raise ArgumentError, "decoder function is required but was not provided"
-  end
-
-  defp validate_required_decoder(decoder) when is_function(decoder, 1), do: :ok
-
-  defp validate_required_decoder(decoder) do
-    raise ArgumentError, """
-    Invalid decoder: expected a function that takes 1 argument, got: #{inspect(decoder)}
-    The decoder must be a function that accepts a JSON string and returns a term.
-    """
   end
 
   defp build_headers(nil), do: build_headers([])

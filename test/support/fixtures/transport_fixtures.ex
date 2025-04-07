@@ -1,13 +1,8 @@
 defmodule Exth.TransportFixtures do
   @moduledoc false
 
-  alias Exth.Rpc.Encoding
-
   def valid_transport_opts do
-    [
-      rpc_url: "https://example.com",
-      decoder: &Encoding.decode_response/1
-    ]
+    [rpc_url: "https://example.com"]
   end
 
   def valid_custom_transport_opts do
