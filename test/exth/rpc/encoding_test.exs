@@ -5,114 +5,6 @@ defmodule Exth.Rpc.EncodingTest do
   alias Exth.Rpc.Request
   alias Exth.Rpc.Response
 
-  describe "encode_request/1" do
-    test "encodes requests with various parameter types" do
-      test_cases = [
-        {build_request("eth_blockNumber"), []},
-        {build_request("eth_getBalance", ["0x123", "latest"]), ["0x123", "latest"]},
-        {build_request("eth_call", [%{"to" => "0x123"}]), [%{"to" => "0x123"}]},
-        {build_request("eth_getLogs", [[1, 2, 3]]), [[1, 2, 3]]},
-        {build_request("test_method", [true, 42, "string"]), [true, 42, "string"]}
-      ]
-
-      for {request, expected_params} <- test_cases do
-        assert {:ok, json} = Encoding.encode_request(request)
-        assert {:ok, decoded} = JSON.decode(json)
-        assert_valid_jsonrpc(decoded)
-        assert decoded["method"] == request.method
-        assert decoded["params"] == expected_params
-        assert decoded["id"] == request.id
-      end
-    end
-
-    test "encodes batch requests with different sizes" do
-      test_cases = [
-        [build_request("method1")],
-        [build_request("method1"), build_request("method2", [], 2)],
-        [
-          build_request("method1"),
-          build_request("method2", ["param"], 2),
-          build_request("method3", [%{"key" => "value"}], 3)
-        ]
-      ]
-
-      for requests <- test_cases do
-        assert {:ok, json} = Encoding.encode_request(requests)
-        assert {:ok, decoded} = JSON.decode(json)
-        assert length(decoded) == length(requests)
-        assert_valid_jsonrpc(decoded)
-
-        Enum.zip(requests, decoded)
-        |> Enum.each(fn {req, dec} ->
-          assert dec["method"] == req.method
-          assert dec["params"] == req.params
-          assert dec["id"] == req.id
-        end)
-      end
-    end
-
-    test "encodes a single request" do
-      request = %Request{
-        method: "eth_blockNumber",
-        params: [],
-        id: 1
-      }
-
-      assert {:ok, json} = Encoding.encode_request(request)
-      assert {:ok, decoded} = JSON.decode(json)
-
-      assert decoded == %{
-               "jsonrpc" => "2.0",
-               "method" => "eth_blockNumber",
-               "params" => [],
-               "id" => 1
-             }
-    end
-
-    test "encodes a request with params" do
-      request = %Request{
-        method: "eth_getBalance",
-        params: ["0x123", "latest"],
-        id: 2
-      }
-
-      assert {:ok, json} = Encoding.encode_request(request)
-      assert {:ok, decoded} = JSON.decode(json)
-
-      assert decoded == %{
-               "jsonrpc" => "2.0",
-               "method" => "eth_getBalance",
-               "params" => ["0x123", "latest"],
-               "id" => 2
-             }
-    end
-
-    test "encodes a batch of requests" do
-      requests = [
-        %Request{method: "eth_blockNumber", params: [], id: 1},
-        %Request{method: "eth_gasPrice", params: [], id: 2}
-      ]
-
-      assert {:ok, json} = Encoding.encode_request(requests)
-      assert {:ok, decoded} = JSON.decode(json)
-
-      assert decoded == [
-               %{
-                 "jsonrpc" => "2.0",
-                 "method" => "eth_blockNumber",
-                 "params" => [],
-                 "id" => 1
-               },
-               %{
-                 "jsonrpc" => "2.0",
-                 "method" => "eth_gasPrice",
-                 "params" => [],
-                 "id" => 2
-               }
-             ]
-    end
-  end
-
   describe "decode_response/1" do
     test "decodes success responses with various result types" do
       test_cases = [
@@ -318,7 +210,7 @@ defmodule Exth.Rpc.EncodingTest do
         id: 1
       }
 
-      assert {:ok, _request_json} = Encoding.encode_request(request)
+      assert {:ok, _request_json} = Request.serialize(request)
 
       # Simulate a success response
       response_json = """
@@ -340,7 +232,7 @@ defmodule Exth.Rpc.EncodingTest do
         %Request{method: "eth_gasPrice", params: [], id: 2}
       ]
 
-      assert {:ok, _request_json} = Encoding.encode_request(requests)
+      assert {:ok, _request_json} = Request.serialize(requests)
 
       response_json = """
       [
@@ -364,18 +256,5 @@ defmodule Exth.Rpc.EncodingTest do
         assert request.id == response.id
       end
     end
-  end
-
-  # Test helpers
-  defp build_request(method, params \\ [], id \\ 1) do
-    Request.new(method, params, id)
-  end
-
-  defp assert_valid_jsonrpc(decoded) when is_map(decoded) do
-    assert decoded["jsonrpc"] == "2.0"
-  end
-
-  defp assert_valid_jsonrpc(decoded) when is_list(decoded) do
-    Enum.each(decoded, &assert_valid_jsonrpc/1)
   end
 end
