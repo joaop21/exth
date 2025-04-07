@@ -48,26 +48,6 @@ defmodule Exth.Rpc.Encoding do
 
   ## Usage
 
-  Encoding single requests:
-
-      request = %Request{
-        jsonrpc: "2.0",
-        method: "eth_blockNumber",
-        params: [],
-        id: 1
-      }
-
-      {:ok, json} = Encoding.encode_request(request)
-
-  Encoding batch requests:
-
-      requests = [
-        %Request{method: "eth_blockNumber", id: 1},
-        %Request{method: "eth_gasPrice", id: 2}
-      ]
-
-      {:ok, json} = Encoding.encode_request(requests)
-
   Decoding responses:
 
       {:ok, response} = Encoding.decode_response(json)
@@ -89,14 +69,6 @@ defmodule Exth.Rpc.Encoding do
     * Protocol version mismatch
 
   ## Examples
-
-      # Encode a single request
-      request = %Request{
-        method: "eth_blockNumber",
-        params: [],
-        id: 1
-      }
-      {:ok, json} = Encoding.encode_request(request)
 
       # Decode a success response
       {:ok, response} = Encoding.decode_response(~s({
@@ -120,7 +92,7 @@ defmodule Exth.Rpc.Encoding do
         %Request{method: "eth_blockNumber", id: 1},
         %Request{method: "eth_gasPrice", id: 2}
       ]
-      {:ok, json} = Encoding.encode_request(requests)
+      {:ok, json} = Request.serialize(requests)
       {:ok, responses} = Encoding.decode_response(json)
 
   ## Implementation Notes
@@ -135,23 +107,7 @@ defmodule Exth.Rpc.Encoding do
   `Exth.Rpc.Response` for response handling.
   """
 
-  alias Exth.Rpc.Request
   alias Exth.Rpc.Response
-
-  @spec encode_request(Request.t() | [Request.t()]) :: {:ok, String.t()} | {:error, Exception.t()}
-  def encode_request(%Request{} = request) do
-    request
-    |> do_encode_request()
-    |> json_encode()
-  end
-
-  def encode_request(requests) when is_list(requests) do
-    requests
-    |> Enum.map(&do_encode_request/1)
-    |> json_encode()
-  end
-
-  defp do_encode_request(%Request{} = request), do: Map.from_struct(request)
 
   @spec decode_response(String.t()) ::
           {:ok, Response.t() | [Response.t()]} | {:error, Exception.t()}
@@ -188,12 +144,5 @@ defmodule Exth.Rpc.Encoding do
 
   defp do_decode_response(response) do
     {:error, "invalid response: #{inspect(response)}"}
-  end
-
-  defp json_encode(data) do
-    encoded = JSON.encode!(data)
-    {:ok, encoded}
-  rescue
-    _ -> {:error, "encoding of #{inspect(data)} failed"}
   end
 end

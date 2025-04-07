@@ -42,7 +42,6 @@ defmodule Exth.Transport do
   Common options for all transports:
 
     * `:rpc_url` - (Required) The endpoint URL
-    * `:encoder` - (Required) Function to encode requests to JSON
     * `:decoder` - (Required) Function to decode JSON responses
 
   HTTP-specific options:
@@ -124,7 +123,6 @@ defmodule Exth.Transport do
   """
   @type options :: [
           rpc_url: String.t(),
-          encoder: (term -> String.t()),
           decoder: (String.t() -> term),
           module: module() | nil
         ]
@@ -154,7 +152,6 @@ defmodule Exth.Transport do
 
   defp validate_opts(opts) do
     opts[:rpc_url] || raise ArgumentError, "missing required option :rpc_url"
-    opts[:encoder] || raise ArgumentError, "missing required option :encoder"
     opts[:decoder] || raise ArgumentError, "missing required option :decoder"
   end
 

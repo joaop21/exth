@@ -99,7 +99,6 @@ defmodule Exth.Rpc do
 
   ## Options
     * `:rpc_url` - (Required) The endpoint URL
-    * `:encoder` - Function to encode requests to JSON
     * `:decoder` - Function to decode JSON responses
     * `:headers` - Additional HTTP headers (HTTP transport only)
     * `:timeout` - Request timeout in ms (HTTP transport only)

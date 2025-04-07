@@ -48,18 +48,6 @@ defmodule Exth.Transport.HttpTest do
       end
     end
 
-    test "validates encoder function", %{opts: opts} do
-      opts = Keyword.delete(opts, :encoder)
-
-      assert_raise ArgumentError, ~r/encoder function is required/, fn ->
-        Http.new(opts)
-      end
-
-      assert_raise ArgumentError, ~r/Invalid encoder/, fn ->
-        Http.new(opts |> Keyword.put(:encoder, "not a function"))
-      end
-    end
-
     test "validates decoder function", %{opts: opts} do
       opts = Keyword.delete(opts, :decoder)
 

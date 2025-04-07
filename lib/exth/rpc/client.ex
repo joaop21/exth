@@ -39,7 +39,6 @@ defmodule Exth.Rpc.Client do
     * `:transport_type` - Transport to use (`:http` or `:custom`)
     * `:timeout` - Request timeout in milliseconds
     * `:headers` - Additional HTTP headers (HTTP only)
-    * `:encoder` - Custom request encoder (defaults to JSON)
     * `:decoder` - Custom response decoder (defaults to JSON)
 
   ## Request ID Generation
@@ -121,10 +120,8 @@ defmodule Exth.Rpc.Client do
   end
 
   defp build_opts(opts) do
-    encoder = &Encoding.encode_request/1
     decoder = &Encoding.decode_response/1
-
-    base_opts = Keyword.new(encoder: encoder, decoder: decoder)
+    base_opts = Keyword.new(decoder: decoder)
 
     Keyword.merge(base_opts, opts)
   end
