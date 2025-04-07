@@ -122,4 +122,40 @@ defmodule Exth.Rpc.Response do
   def error(id, code, message, data \\ nil) when not is_nil(id) do
     %Error{id: id, error: %{code: code, message: message, data: data}}
   end
+
+  @spec deserialize(String.t()) :: {:ok, t() | [t()]} | {:error, Exception.t()}
+  def deserialize(json) when is_binary(json) do
+    with {:ok, response} <- JSON.decode(json) do
+      do_decode_response(response)
+    end
+  end
+
+  defp do_decode_response(%{"id" => id, "result" => result}),
+    do: {:ok, __MODULE__.success(id, result)}
+
+  defp do_decode_response(%{"id" => id, "error" => error}) do
+    case error do
+      %{"code" => code, "message" => message, "data" => data} ->
+        {:ok, __MODULE__.error(id, code, message, data)}
+
+      %{"code" => code, "message" => message} ->
+        {:ok, __MODULE__.error(id, code, message)}
+    end
+  end
+
+  defp do_decode_response(responses) when is_list(responses) do
+    results = Enum.map(responses, &do_decode_response/1)
+
+    case Enum.split_with(results, &match?({:ok, _}, &1)) do
+      {successful, []} ->
+        {:ok, Enum.map(successful, fn {:ok, resp} -> resp end)}
+
+      {_, errors} ->
+        {:error, "invalid responses in batch: #{inspect(errors)}"}
+    end
+  end
+
+  defp do_decode_response(response) do
+    {:error, "invalid response: #{inspect(response)}"}
+  end
 end
