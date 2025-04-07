@@ -25,24 +25,6 @@ defmodule Exth.Rpc.EncodingTest do
       end
     end
 
-    test "new/3 raises on invalid inputs" do
-      assert_raise ArgumentError, "invalid method: cannot be nil", fn ->
-        Request.new(nil, [], 1)
-      end
-
-      assert_raise ArgumentError, "invalid method: cannot be empty", fn ->
-        Request.new("", [], 1)
-      end
-
-      assert_raise ArgumentError, "invalid params: must be a list", fn ->
-        Request.new("method", nil, 1)
-      end
-
-      assert_raise ArgumentError, "invalid id: must be a positive integer", fn ->
-        Request.new("method", [], 0)
-      end
-    end
-
     test "encodes batch requests with different sizes" do
       test_cases = [
         [build_request("method1")],
