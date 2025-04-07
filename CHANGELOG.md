@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.2.2 - 2025-04-07
+
+### Changed
+
+- Moved `Exth.Rpc.Encoding.encode_request/1` logic to `Exth.Rpc.Request.serialize/1`
+- Moved `Exth.Rpc.Encoding.decode_response/1` logic to `Exth.Rpc.Response.deserialize/1`
+- Removed `Exth.Rpc.Encoding` module
+- Transport module does not receive an `encoder/1` and `decoder/1` option
+  anymore. It's now direct to call `Exth.Rpc.Request.serialize/1` and
+  `Exth.Rpc.Response.deserialize/1` functions.
+- These changes aim to reduce the complexity of `Exth.Rpc` and `Exth.Transport`
+  modules and make it easier to understand its internals.
+
+[0.2.2]: https://github.com/joaop21/exth/releases/tag/v0.2.2
+
 ## 0.2.1 - 2025-04-05
 
 ### Changed
