@@ -48,18 +48,6 @@ defmodule Exth.Transport.HttpTest do
       end
     end
 
-    test "validates decoder function", %{opts: opts} do
-      opts = Keyword.delete(opts, :decoder)
-
-      assert_raise ArgumentError, ~r/decoder function is required/, fn ->
-        Http.new(opts)
-      end
-
-      assert_raise ArgumentError, ~r/Invalid decoder/, fn ->
-        Http.new(opts |> Keyword.put(:decoder, "not a function"))
-      end
-    end
-
     test "accepts custom headers", %{opts: opts} do
       opts = Keyword.put(opts, :headers, [{"x-api-key", "test"}])
       transport = Http.new(opts)

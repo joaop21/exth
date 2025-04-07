@@ -11,7 +11,6 @@ defmodule Exth.Rpc.Client do
     * Transport abstraction
     * Request/response lifecycle management
     * Batch request support
-    * Automatic encoding/decoding
     * Error handling
 
   ## Usage
@@ -39,7 +38,6 @@ defmodule Exth.Rpc.Client do
     * `:transport_type` - Transport to use (`:http` or `:custom`)
     * `:timeout` - Request timeout in milliseconds
     * `:headers` - Additional HTTP headers (HTTP only)
-    * `:decoder` - Custom response decoder (defaults to JSON)
 
   ## Request ID Generation
 
@@ -94,7 +92,6 @@ defmodule Exth.Rpc.Client do
   for request formatting.
   """
   alias Exth.Rpc
-  alias Exth.Rpc.Encoding
   alias Exth.Rpc.Request
   alias Exth.Transport
   alias Exth.Transport.Transportable
@@ -110,20 +107,12 @@ defmodule Exth.Rpc.Client do
 
   @spec new(Transport.type(), keyword()) :: t()
   def new(type, opts) when type in @transport_types do
-    opts = build_opts(opts)
     transport = Transport.new(type, opts)
 
     %__MODULE__{
       counter: :atomics.new(1, signed: false),
       transport: transport
     }
-  end
-
-  defp build_opts(opts) do
-    decoder = &Encoding.decode_response/1
-    base_opts = Keyword.new(decoder: decoder)
-
-    Keyword.merge(base_opts, opts)
   end
 
   @spec request(t(), Rpc.method(), Rpc.params()) :: Request.t()

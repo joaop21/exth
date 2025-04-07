@@ -11,9 +11,8 @@ defmodule Exth.Rpc do
     * Batch request support for better performance
     * Configurable transport layers (HTTP, custom implementations)
     * Automatic request ID generation and version management
-    * Flexible JSON encoding/decoding options
-    * Comprehensive error handling
 
+  * Comprehensive error handling
   ## Quick Start
 
       # Create a client
@@ -99,7 +98,6 @@ defmodule Exth.Rpc do
 
   ## Options
     * `:rpc_url` - (Required) The endpoint URL
-    * `:decoder` - Function to decode JSON responses
     * `:headers` - Additional HTTP headers (HTTP transport only)
     * `:timeout` - Request timeout in ms (HTTP transport only)
 
