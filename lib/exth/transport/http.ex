@@ -53,7 +53,6 @@ defmodule Exth.Transport.Http do
 
   ## Options
     * `:rpc_url` - (required) The HTTP/HTTPS endpoint URL
-    * `:encoder` - (required) Function to encode requests
     * `:decoder` - (required) Function to decode responses
     * `:adapter` - Tesla adapter to use (defaults to `Tesla.Adapter.Mint`)
     * `:headers` - Additional HTTP headers for requests
@@ -63,7 +62,6 @@ defmodule Exth.Transport.Http do
   def new(opts) do
     with {:ok, rpc_url} <- validate_required_url(opts[:rpc_url]),
          :ok <- validate_url_format(rpc_url),
-         :ok <- validate_required_encoder(opts[:encoder]),
          :ok <- validate_required_decoder(opts[:decoder]) do
       build_client(opts, rpc_url)
     end
@@ -75,7 +73,6 @@ defmodule Exth.Transport.Http do
         rpc_url: rpc_url,
         headers: opts[:headers],
         timeout: opts[:timeout] || @default_timeout,
-        encoder: opts[:encoder],
         decoder: opts[:decoder]
       )
 
@@ -90,7 +87,7 @@ defmodule Exth.Transport.Http do
     [
       {Tesla.Middleware.BaseUrl, config[:rpc_url]},
       {Tesla.Middleware.Headers, build_headers(config[:headers])},
-      {Tesla.Middleware.JSON, encode: config[:encoder], decode: config[:decoder]},
+      {Tesla.Middleware.JSON, encode: &Request.serialize/1, decode: config[:decoder]},
       {Tesla.Middleware.Timeout, timeout: config[:timeout]}
     ]
   end
@@ -118,17 +115,6 @@ defmodule Exth.Transport.Http do
           - Contain a valid host
         """
     end
-  end
-
-  defp validate_required_encoder(nil) do
-    raise ArgumentError, "encoder function is required but was not provided"
-  end
-
-  defp validate_required_encoder(encoder) when is_function(encoder, 1), do: :ok
-
-  defp validate_required_encoder(encoder) do
-    raise ArgumentError,
-          "Invalid encoder: expected a function that takes 1 argument, got: #{inspect(encoder)}"
   end
 
   defp validate_required_decoder(nil) do

@@ -21,7 +21,7 @@ defmodule Exth.TransportTest do
     end
 
     test "validates base transport requirements" do
-      required_opts = [:rpc_url, :encoder, :decoder]
+      required_opts = [:rpc_url, :decoder]
 
       for opt <- required_opts do
         opts = valid_transport_opts() |> Keyword.delete(opt)

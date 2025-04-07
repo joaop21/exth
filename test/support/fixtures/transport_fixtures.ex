@@ -6,7 +6,6 @@ defmodule Exth.TransportFixtures do
   def valid_transport_opts do
     [
       rpc_url: "https://example.com",
-      encoder: &Encoding.encode_request/1,
       decoder: &Encoding.decode_response/1
     ]
   end
