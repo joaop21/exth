@@ -103,9 +103,7 @@ defmodule Exth.Provider do
       alias Exth.Provider
 
       require Provider.Generator
-      require Provider.Validator
 
-      Provider.Validator.validate_options!(opts)
       Provider.Generator.generate_provider(opts)
     end
   end
