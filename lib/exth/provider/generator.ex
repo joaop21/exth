@@ -33,7 +33,9 @@ defmodule Exth.Provider.Generator do
       @type rpc_response :: {:ok, term()} | {:error, term()}
 
       @default_block_tag "latest"
-      @provider_opts opts
+      @provider_app Keyword.fetch!(opts, :otp_app)
+      @provider_key __MODULE__
+      @provider_inline_opts opts
 
       for {method_name, {rpc_method, param_types, accepts_block}} <- Methods.methods() do
         Provider.Generator.generate_rpc_method(
@@ -135,15 +137,18 @@ defmodule Exth.Provider.Generator do
       """
       @spec get_client() :: Rpc.Client.t()
       def get_client do
-        transport_type = Keyword.fetch!(@provider_opts, :transport_type)
-        rpc_url = Keyword.fetch!(@provider_opts, :rpc_url)
+        app_config = Application.get_env(@provider_app, @provider_key, [])
+        config = Keyword.merge(app_config, @provider_inline_opts)
+
+        transport_type = Keyword.fetch!(config, :transport_type)
+        rpc_url = Keyword.fetch!(config, :rpc_url)
 
         case ClientCache.get_client(transport_type, rpc_url) do
           {:ok, client} ->
             client
 
           {:error, :not_found} ->
-            client = Rpc.new_client(transport_type, @provider_opts)
+            client = Rpc.new_client(transport_type, config)
             ClientCache.create_client(transport_type, rpc_url, client)
         end
       end
