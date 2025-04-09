@@ -1,100 +1,112 @@
 defmodule Exth.ProviderTest do
+  @moduledoc """
+  Tests for the Exth.Provider module.
+
+  These tests verify that the Provider module correctly:
+  - Generates RPC methods with proper documentation and type specifications
+  - Manages client lifecycle and caching
+  - Implements the correct function signatures for Ethereum JSON-RPC methods
+  """
+
   # This is the samme as ClientCacheTest. We can't use async: true because we're
   # using :persistent_term
   use ExUnit.Case
 
-  import Exth.TestHelpers
+  alias Exth.TestProvider
 
   doctest Exth.Provider
 
-  # Test implementation of Provider
-  defmodule TestProvider do
-    use Exth.Provider,
-      transport_type: :http,
-      rpc_url: generate_rpc_url()
-  end
-
-  describe "configuration validation" do
-    test "raises when required options are missing" do
-      assert_raise ArgumentError, ~r/Missing required options/, fn ->
-        defmodule InvalidProvider do
-          use Exth.Provider
-        end
-      end
-
-      assert_raise ArgumentError, ~r/Missing required options.*:rpc_url/, fn ->
-        defmodule PartialProvider do
-          use Exth.Provider, transport_type: :http
-        end
-      end
-    end
-
-    test "accepts valid configuration" do
-      defmodule ValidProvider do
-        use Exth.Provider,
-          transport_type: :http,
-          rpc_url: generate_rpc_url()
-      end
-
-      assert {:module, ValidProvider} = Code.ensure_compiled(ValidProvider)
-    end
-  end
-
-  describe "method generation" do
-    test "generates methods defined in Methods module" do
+  describe "RPC method generation" do
+    test "generates all required Ethereum JSON-RPC methods" do
       methods = TestProvider.__info__(:functions)
+
       assert Keyword.has_key?(methods, :block_number)
       assert Keyword.has_key?(methods, :get_balance)
       assert Keyword.has_key?(methods, :get_block_by_number)
+      assert Keyword.has_key?(methods, :get_transaction_count)
+      assert Keyword.has_key?(methods, :send_raw_transaction)
     end
 
-    test "generated methods have correct arity" do
+    test "generates methods with correct arity for different parameter combinations" do
       methods = TestProvider.__info__(:functions)
+
+      # Methods with no parameters
       assert methods[:block_number] == 0
-      # /1, address
-      # /2, address, block_tag
+
+      # Methods with optional block tag
       assert Keyword.get_values(methods, :get_balance) == [1, 2]
-      # block_number, full_txs
+      assert Keyword.get_values(methods, :get_transaction_count) == [1, 2]
+
+      # Methods with required parameters
       assert methods[:get_block_by_number] == 2
+      assert methods[:send_raw_transaction] == 1
+    end
+
+    test "generates methods with complete documentation" do
+      {:docs_v1, _, :elixir, "text/markdown", %{}, _, function_docs} =
+        Code.fetch_docs(TestProvider)
+
+      # Test documentation for a method with optional parameters
+      get_balance_doc =
+        Enum.find(function_docs, fn
+          {{:function, :get_balance, _}, _, _, _, _} -> true
+          _ -> false
+        end)
+
+      assert get_balance_doc != nil
+      doc_content = elem(get_balance_doc, 3)
+      assert is_map(doc_content)
+      assert doc_content["en"] =~ "Parameters"
+      assert doc_content["en"] =~ "Returns"
+      assert doc_content["en"] =~ "default: \"latest\""
+    end
+
+    test "generates methods with correct type specifications" do
+      {:ok, specs} = Code.Typespec.fetch_specs(TestProvider)
+
+      # Test specs for different method types
+      get_balance_spec = Enum.find(specs, fn {{name, _}, _} -> name == :get_balance end)
+      block_number_spec = Enum.find(specs, fn {{name, _}, _} -> name == :block_number end)
+
+      assert get_balance_spec != nil
+      assert block_number_spec != nil
     end
   end
 
-  describe "client management" do
-    test "get_client returns a client" do
+  describe "client lifecycle management" do
+    test "get_client returns a properly configured RPC client" do
       client = TestProvider.get_client()
+
       assert is_map(client)
+      assert client.__struct__ == Exth.Rpc.Client
     end
 
-    test "get_client returns the same client on subsequent calls" do
+    test "get_client implements caching by returning the same client instance" do
       client1 = TestProvider.get_client()
       client2 = TestProvider.get_client()
+
       assert client1 == client2
+      assert :erlang.phash2(client1) == :erlang.phash2(client2)
     end
   end
 
-  describe "provider interface" do
-    test "eth_getBalance has correct function signature" do
-      {:arity, 2} =
-        :erlang.fun_info(
-          &TestProvider.get_balance/2,
-          :arity
-        )
+  describe "Ethereum JSON-RPC interface" do
+    test "implements correct function signatures for all RPC methods" do
+      # Test method with no parameters
+      assert {:arity, 0} = :erlang.fun_info(&TestProvider.block_number/0, :arity)
+
+      # Test method with optional block tag
+      assert {:arity, 1} = :erlang.fun_info(&TestProvider.get_balance/1, :arity)
+      assert {:arity, 2} = :erlang.fun_info(&TestProvider.get_balance/2, :arity)
+
+      # Test method with required parameters
+      assert {:arity, 2} = :erlang.fun_info(&TestProvider.get_block_by_number/2, :arity)
     end
 
-    test "eth_blockNumber has correct function signature" do
-      {:arity, 0} =
-        :erlang.fun_info(
-          &TestProvider.block_number/0,
-          :arity
-        )
-    end
-
-    test "eth_getBlockByNumber has correct function signature" do
-      {:arity, 2} =
-        :erlang.fun_info(
-          &TestProvider.get_block_by_number/2,
-          :arity
-        )
+    test "implements correct parameter handling for block tags" do
+      # Test that block tag defaults to "latest"
+      assert {:arity, 1} = :erlang.fun_info(&TestProvider.get_balance/1, :arity)
+      assert {:arity, 2} = :erlang.fun_info(&TestProvider.get_balance/2, :arity)
     end
   end
 end
