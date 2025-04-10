@@ -6,6 +6,7 @@ defmodule Exth.TestProvider do
   """
   use Exth.Provider,
     otp_app: :exth,
-    transport_type: :http,
+    transport_type: :custom,
+    module: Exth.TestTransport,
     rpc_url: "http://localhost:8545"
 end
