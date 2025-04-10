@@ -35,7 +35,7 @@ Exth offers two ways to interact with EVM nodes:
 
 1. **Provider** (High-Level): Define a provider module with convenient function
    names and no need to pass client references.
-2. **Client** (Low-Level): Direct client usage with more control, requiring
+2. **RPC Client** (Low-Level): Direct client usage with more control, requiring
    explicit client handling.
 
 <!-- tabs-open -->
@@ -114,42 +114,42 @@ timeout: 30_000                 # Request timeout in milliseconds
 headers: [{"header", "value"}]  # Custom headers for HTTP transport
 ```
 
-### Client
+### RPC Client
 
 ```elixir
-alias Exth.Client
+alias Exth.Rpc
 
 # 1. Define a client
-{:ok, client} = Client.new(
+{:ok, client} = Rpc.new_client(
   transport_type: :http,
   rpc_url: "https://YOUR-RPC-URL"
 )
 
 # 2.1. Make RPC calls with explicit client
-request1 = Client.request(client, "eth_blockNumber", [])
-{:ok, block_number} = Client.send(client, request1)
+request1 = Rpc.request(client, "eth_blockNumber", [])
+{:ok, block_number} = Rpc.send(client, request1)
 
 # 2.2. Or make RPC calls without a client
-request2 = Client.request(
+request2 = Rpc.request(
   "eth_getBalance",
   ["0x742d35Cc6634C0532925a3b844Bc454e4438f44e", "latest"]
 )
-{:ok, balance} = Client.send(client, request2)
+{:ok, balance} = Rpc.send(client, request2)
 
 # 3. You can also send multiple requests in one call
 requests = [request1, request2]
-{:ok, responses} = Client.send(client, requests)
+{:ok, responses} = Rpc.send(client, requests)
 
 # 4. You can invert the order of the arguments and pipe
-Client.request("eth_blockNumber", [])
-|> Client.send(client)
+Rpc.request("eth_blockNumber", [])
+|> Rpc.send(client)
 
 # OR
 [request1, request2]
-|> Client.send(client)
+|> Rpc.send(client)
 ```
 
-Use the Client approach when you need:
+Use the RPC Client approach when you need:
 
 - 🔧 Direct control over RPC calls
 - 🔄 Dynamic method names
@@ -183,7 +183,7 @@ defmodule MyProvider do
 end
 
 # Direct client configuration
-{:ok, client} = Exth.Client.new(
+{:ok, client} = Exth.Rpc.new(
   transport_type: :http,
   rpc_url: "https://eth-mainnet.example.com",
   adapter: Tesla.Adapter.Mint,
@@ -232,7 +232,7 @@ defmodule MyProvider do
 end
 
 # Direct client configuration
-{:ok, client} = Exth.Client.new(
+{:ok, client} = Exth.Rpc.new_request(
   transport_type: :custom,
   rpc_url: "https://eth-mainnet.example.com",
   module: MyCustomTransport,
