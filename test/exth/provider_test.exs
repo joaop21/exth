@@ -6,6 +6,7 @@ defmodule Exth.ProviderTest do
   - Generates RPC methods with proper documentation and type specifications
   - Manages client lifecycle and caching
   - Implements the correct function signatures for Ethereum JSON-RPC methods
+  - Handles dynamic configuration from both inline options and application config
   """
 
   # This is the samme as ClientCacheTest. We can't use async: true because we're
@@ -13,8 +14,96 @@ defmodule Exth.ProviderTest do
   use ExUnit.Case
 
   alias Exth.TestProvider
+  alias Exth.TestTransport
 
   doctest Exth.Provider
+
+  describe "configuration" do
+    test "merges inline configuration with application config" do
+      # Create a new provider with inline config
+      defmodule ConfigTestProvider do
+        use Exth.Provider,
+          otp_app: :exth,
+          transport_type: :custom,
+          module: TestTransport,
+          rpc_url: "http://inline-url",
+          max_retries: 3
+      end
+
+      # Set some application config
+      Application.put_env(:exth, ConfigTestProvider,
+        rpc_url: "http://config-url",
+        timeout: 5000
+      )
+
+      # Get the client to force compilation
+      client = ConfigTestProvider.get_client()
+
+      # Verify that inline config takes precedence
+      assert client.transport.config[:rpc_url] == "http://inline-url"
+      # Verify that application config is used when not overridden
+      assert client.transport.config[:timeout] == 5000
+      # Verify that inline-only config is present
+      assert client.transport.config[:max_retries] == 3
+      # Verify that transport type and module are set correctly
+      assert client.transport.config[:transport_type] == :custom
+      assert client.transport.config[:module] == TestTransport
+    end
+
+    test "uses application config when no inline config is provided" do
+      # Create a new provider with minimal inline config
+      defmodule AppConfigTestProvider do
+        use Exth.Provider,
+          otp_app: :exth,
+          transport_type: :custom,
+          module: TestTransport
+      end
+
+      # Set application config
+      Application.put_env(:exth, AppConfigTestProvider,
+        rpc_url: "http://app-config-url",
+        timeout: 10_000,
+        max_retries: 5
+      )
+
+      # Get the client to force compilation
+      client = AppConfigTestProvider.get_client()
+
+      # Verify that application config is used
+      assert client.transport.config[:rpc_url] == "http://app-config-url"
+      assert client.transport.config[:timeout] == 10_000
+      assert client.transport.config[:max_retries] == 5
+      # Verify that transport type and module are set correctly
+      assert client.transport.config[:transport_type] == :custom
+      assert client.transport.config[:module] == TestTransport
+    end
+
+    test "requires essential configuration options" do
+      # Create a provider without required config
+      defmodule InvalidConfigProvider do
+        use Exth.Provider,
+          otp_app: :exth
+      end
+
+      assert_raise KeyError, fn ->
+        InvalidConfigProvider.get_client()
+      end
+    end
+
+    test "validates transport configuration" do
+      # Create a provider with invalid transport config
+      defmodule InvalidTransportProvider do
+        use Exth.Provider,
+          otp_app: :exth,
+          transport_type: :invalid,
+          module: TestTransport
+      end
+
+      assert_raise KeyError, fn ->
+        InvalidTransportProvider.get_client()
+      end
+    end
+  end
 
   describe "RPC method generation" do
     test "generates all required Ethereum JSON-RPC methods" do
