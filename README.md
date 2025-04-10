@@ -12,6 +12,7 @@ calls.
 - 🛡️ **Error Handling**: Detailed error reporting and recovery
 - 📦 **Batch Support**: Efficient batch request processing
 - 🔌 **Protocol Compliance**: Full JSON-RPC 2.0 specification support
+- ⚙️ **Dynamic Configuration**: Flexible configuration through both inline options and application config
 
 ## Installation
 
@@ -42,12 +43,36 @@ Exth offers two ways to interact with EVM nodes:
 ### Provider (Recommended)
 
 ```elixir
+# Basic usage with inline configuration
 defmodule MyProvider do
   use Exth.Provider,
     transport_type: :http,
     rpc_url: "https://YOUR-RPC-URL"
 end
 
+# Dynamic configuration through application config
+# In your config/config.exs or similar:
+config :exth, MyProvider,
+  rpc_url: "https://YOUR-RPC-URL",
+  timeout: 30_000,
+  max_retries: 3
+
+# Then in your provider module:
+defmodule MyProvider do
+  use Exth.Provider,
+    otp_app: :exth,
+    transport_type: :http
+end
+
+# Configuration is merged with inline options taking precedence
+defmodule MyProvider do
+  use Exth.Provider,
+    otp_app: :exth,
+    transport_type: :http,
+    rpc_url: "https://OVERRIDE-RPC-URL" # This will override the config value
+end
+
+# Use the provider
 {:ok, block_number} = MyProvider.block_number()
 
 {:ok, balance} = MyProvider.get_balance(
@@ -66,6 +91,28 @@ The Provider approach is recommended for most use cases as it provides:
 - 🔒 Type-safe parameters
 - 📝 Better documentation and IDE support
 - 🎯 No need to manage client references
+- ⚙️ Flexible configuration through both inline options and application config
+
+### Configuration Options
+
+Providers can be configured through both inline options and application config.
+Inline options take precedence over application config. Here are the available options:
+
+```elixir
+# Required options
+transport_type: :http | :custom  # Transport type to use
+rpc_url: "https://..."          # RPC endpoint URL
+
+# Required inline option
+otp_app: :exth                  # Application name for config lookup
+
+# Custom transport options
+module: MyCustomTransport       # Required when transport_type is :custom
+
+# Optional http options
+timeout: 30_000                 # Request timeout in milliseconds
+headers: [{"header", "value"}]  # Custom headers for HTTP transport
+```
 
 ### Client
 
