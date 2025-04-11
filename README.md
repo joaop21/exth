@@ -46,13 +46,14 @@ Exth offers two ways to interact with EVM nodes:
 # Basic usage with inline configuration
 defmodule MyProvider do
   use Exth.Provider,
+    otp_app: :your_otp_app,
     transport_type: :http,
     rpc_url: "https://YOUR-RPC-URL"
 end
 
 # Dynamic configuration through application config
 # In your config/config.exs or similar:
-config :exth, MyProvider,
+config :your_otp_app, MyProvider,
   rpc_url: "https://YOUR-RPC-URL",
   timeout: 30_000,
   max_retries: 3
@@ -60,14 +61,14 @@ config :exth, MyProvider,
 # Then in your provider module:
 defmodule MyProvider do
   use Exth.Provider,
-    otp_app: :exth,
+    otp_app: :your_otp_app,
     transport_type: :http
 end
 
 # Configuration is merged with inline options taking precedence
 defmodule MyProvider do
   use Exth.Provider,
-    otp_app: :exth,
+    otp_app: :your_otp_app,
     transport_type: :http,
     rpc_url: "https://OVERRIDE-RPC-URL" # This will override the config value
 end
@@ -93,7 +94,7 @@ The Provider approach is recommended for most use cases as it provides:
 - 🎯 No need to manage client references
 - ⚙️ Flexible configuration through both inline options and application config
 
-### Configuration Options
+#### Configuration Options
 
 Providers can be configured through both inline options and application config.
 Inline options take precedence over application config. Here are the available options:
@@ -104,7 +105,7 @@ transport_type: :http | :custom  # Transport type to use
 rpc_url: "https://..."          # RPC endpoint URL
 
 # Required inline option
-otp_app: :exth                  # Application name for config lookup
+otp_app: :your_otp_app          # Application name for config lookup
 
 # Custom transport options
 module: MyCustomTransport       # Required when transport_type is :custom
@@ -249,17 +250,7 @@ end
 ## Examples
 
 Check out our [examples](https://github.com/joaop21/exth/tree/main/examples)
-directory for practical usage examples:
-
-- [multichain.exs](https://github.com/joaop21/exth/blob/main/examples/multichain.exs)
-  : Working with multiple chains/providers
-- More examples coming soon!
-
-To run an example:
-
-```bash
-mix run --no-mix-exs examples/multichain.exs
-```
+directory for practical usage examples
 
 ## Requirements
 
