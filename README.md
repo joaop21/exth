@@ -46,13 +46,14 @@ Exth offers two ways to interact with EVM nodes:
 # Basic usage with inline configuration
 defmodule MyProvider do
   use Exth.Provider,
+    otp_app: :your_otp_app,
     transport_type: :http,
     rpc_url: "https://YOUR-RPC-URL"
 end
 
 # Dynamic configuration through application config
 # In your config/config.exs or similar:
-config :exth, MyProvider,
+config :your_otp_app, MyProvider,
   rpc_url: "https://YOUR-RPC-URL",
   timeout: 30_000,
   max_retries: 3
@@ -60,14 +61,14 @@ config :exth, MyProvider,
 # Then in your provider module:
 defmodule MyProvider do
   use Exth.Provider,
-    otp_app: :exth,
+    otp_app: :your_otp_app,
     transport_type: :http
 end
 
 # Configuration is merged with inline options taking precedence
 defmodule MyProvider do
   use Exth.Provider,
-    otp_app: :exth,
+    otp_app: :your_otp_app,
     transport_type: :http,
     rpc_url: "https://OVERRIDE-RPC-URL" # This will override the config value
 end
@@ -104,7 +105,7 @@ transport_type: :http | :custom  # Transport type to use
 rpc_url: "https://..."          # RPC endpoint URL
 
 # Required inline option
-otp_app: :exth                  # Application name for config lookup
+otp_app: :your_otp_app          # Application name for config lookup
 
 # Custom transport options
 module: MyCustomTransport       # Required when transport_type is :custom
