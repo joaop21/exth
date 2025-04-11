@@ -250,17 +250,7 @@ end
 ## Examples
 
 Check out our [examples](https://github.com/joaop21/exth/tree/main/examples)
-directory for practical usage examples:
-
-- [multichain.exs](https://github.com/joaop21/exth/blob/main/examples/multichain.exs)
-  : Working with multiple chains/providers
-- More examples coming soon!
-
-To run an example:
-
-```bash
-mix run --no-mix-exs examples/multichain.exs
-```
+directory for practical usage examples
 
 ## Requirements
 
