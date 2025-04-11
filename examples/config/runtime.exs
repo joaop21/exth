@@ -1,3 +1,3 @@
 import Config
 
-config :examples, Examples.EthProvider, rpc_url: "https://eth.llamarpc.com"
+config :examples, Examples.Provider.Ethereum, rpc_url: "https://eth.llamarpc.com"
