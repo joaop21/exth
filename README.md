@@ -93,7 +93,7 @@ The Provider approach is recommended for most use cases as it provides:
 - 🎯 No need to manage client references
 - ⚙️ Flexible configuration through both inline options and application config
 
-### Configuration Options
+#### Configuration Options
 
 Providers can be configured through both inline options and application config.
 Inline options take precedence over application config. Here are the available options:
