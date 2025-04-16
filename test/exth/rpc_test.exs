@@ -7,6 +7,8 @@ defmodule Exth.RpcTest do
   use ExUnit.Case, async: true
 
   alias Exth.Rpc
+  alias Exth.Rpc.Call
+  alias Exth.Rpc.Request
   alias Exth.TestTransport
 
   setup do
@@ -15,26 +17,51 @@ defmodule Exth.RpcTest do
   end
 
   describe "public API" do
-    test "jsonrpc_version/0 returns correct version" do
-      assert Rpc.jsonrpc_version() == "2.0"
-    end
-
     test "new_client/2 creates a working client", %{client: client} do
       assert %Exth.Rpc.Client{} = client
     end
 
-    test "request/3 creates valid request", %{client: client} do
-      request = Rpc.request(client, "eth_blockNumber", [])
+    test "request/3 creates valid RPC call", %{client: client} do
+      rpc_call = Rpc.request(client, "eth_blockNumber", [])
 
-      assert %Exth.Rpc.Request{} = request
+      assert %Exth.Rpc.Call{} = rpc_call
+      request = rpc_call |> Call.get_requests() |> hd()
       assert request.method == "eth_blockNumber"
       assert request.params == []
       assert request.jsonrpc == "2.0"
       assert is_integer(request.id)
     end
 
+    test "request/3 creates a batch RPC call", %{client: client} do
+      rpc_call =
+        client
+        |> Rpc.request("eth_blockNumber", [])
+        |> Rpc.request("eth_chainId", [])
+
+      assert %Exth.Rpc.Call{} = rpc_call
+      [request1, request2] = rpc_call |> Call.get_requests()
+
+      assert request1.method == "eth_blockNumber"
+      assert request1.params == []
+      assert request1.jsonrpc == "2.0"
+      assert is_integer(request1.id)
+
+      assert request2.method == "eth_chainId"
+      assert request2.params == []
+      assert request2.jsonrpc == "2.0"
+      assert is_integer(request2.id)
+    end
+
+    test "raw_request/3 creates a standalone raw request" do
+      %Request{} = request = Rpc.raw_request("eth_blockNumber", [], 1)
+      assert request.id == 1
+      assert request.jsonrpc == "2.0"
+      assert request.method == "eth_blockNumber"
+      assert request.params == []
+    end
+
     test "send/2 works with single request", %{client: client} do
-      request = Rpc.request(client, "eth_blockNumber", [])
+      request = Rpc.raw_request("eth_blockNumber", [], 1_000)
 
       assert {:ok, response} = Rpc.send(client, request)
       assert %Exth.Rpc.Response.Success{} = response
@@ -43,24 +70,29 @@ defmodule Exth.RpcTest do
 
     test "send/2 works with batch request", %{client: client} do
       requests = [
-        Rpc.request(client, "eth_blockNumber", []),
-        Rpc.request(client, "eth_chainId", [])
+        Rpc.raw_request("eth_blockNumber", []),
+        Rpc.raw_request("eth_chainId", [])
       ]
 
       assert {:ok, responses} = Rpc.send(client, requests)
       assert length(responses) == 2
-
-      Enum.zip(requests, responses)
-      |> Enum.each(fn {req, resp} ->
-        assert %Exth.Rpc.Response.Success{} = resp
-        assert resp.id == req.id
-      end)
+      assert [%Exth.Rpc.Response.Success{}, %Exth.Rpc.Response.Success{}] = responses
     end
   end
 
-  test "examples from documentation work", %{client: client} do
-    request = Rpc.request(client, "eth_blockNumber", [])
-    assert {:ok, response} = Rpc.send(client, request)
+  test "send/1 successfully works with an RPC call with a single request", %{client: client} do
+    call = Rpc.request(client, "eth_blockNumber", [])
+    assert {:ok, response} = Rpc.send(call)
     assert %Exth.Rpc.Response.Success{} = response
+  end
+
+  test "send/1 successfully works with a batch RPC call", %{client: client} do
+    rpc_call =
+      client
+      |> Rpc.request("eth_blockNumber", [])
+      |> Rpc.request("eth_chainId", [])
+
+    assert {:ok, response} = Rpc.send(rpc_call)
+    assert [%Exth.Rpc.Response.Success{}, %Exth.Rpc.Response.Success{}] = response
   end
 end
