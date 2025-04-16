@@ -22,10 +22,10 @@ defmodule Examples do
     |> Enum.map(fn provider -> {provider, provider.get_client()} end)
     |> Enum.each(fn {provider, client} ->
       {:ok, %Rpc.Response.Success{result: block_number}} =
-        Rpc.request("eth_blockNumber", []) |> Rpc.send(client)
+        client |> Rpc.request("eth_blockNumber", []) |> Rpc.send()
 
       {:ok, %Rpc.Response.Success{result: balance}} =
-        Rpc.request("eth_getBalance", [address, block_number]) |> Rpc.send(client)
+        client |> Rpc.request("eth_getBalance", [address, block_number]) |> Rpc.send()
 
       Logger.info("#{provider} Client: block_number: #{block_number}")
       Logger.info("#{provider} Client: get_balance: #{balance}")
