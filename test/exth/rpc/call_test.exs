@@ -51,8 +51,8 @@ defmodule Exth.Rpc.CallTest do
 
       call =
         Call.new(client)
-        |> Call.add_request(call, "eth_blockNumber", [])
-        |> Call.add_request(call, "eth_getBalance", ["0x123", "latest"])
+        |> Call.add_request("eth_blockNumber", [])
+        |> Call.add_request("eth_getBalance", ["0x123", "latest"])
 
       requests = Call.get_requests(call)
       assert length(requests) == 2
