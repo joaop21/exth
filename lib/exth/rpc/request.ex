@@ -19,20 +19,20 @@ defmodule Exth.Rpc.Request do
       }
   """
 
-  alias Exth.Rpc
+  alias Exth.Rpc.Types
 
   @type t :: %__MODULE__{
-          id: Rpc.id(),
-          jsonrpc: Rpc.jsonrpc(),
-          method: Rpc.method(),
-          params: Rpc.params()
+          id: Types.id(),
+          jsonrpc: Types.jsonrpc(),
+          method: Types.method(),
+          params: Types.params()
         }
 
   defstruct [
     :method,
     id: nil,
     params: [],
-    jsonrpc: Rpc.jsonrpc_version()
+    jsonrpc: Types.jsonrpc_version()
   ]
 
   @doc """
@@ -55,7 +55,7 @@ defmodule Exth.Rpc.Request do
       request = Request.new("eth_getBalance", ["0x742d...", "latest"], 1)
       # => %Request{id: 1, method: "eth_getBalance", params: ["0x742d...", "latest"]}
   """
-  @spec new(Rpc.method(), Rpc.params(), Rpc.id() | nil) :: t()
+  @spec new(Types.method(), Types.params(), Types.id() | nil) :: t()
   def new(method, params, id \\ nil) do
     validate_method(method)
     validate_params(params)

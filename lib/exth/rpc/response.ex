@@ -31,7 +31,7 @@ defmodule Exth.Rpc.Response do
       }
   """
 
-  alias Exth.Rpc
+  alias Exth.Rpc.Types
 
   defmodule Success do
     @moduledoc """
@@ -53,14 +53,14 @@ defmodule Exth.Rpc.Response do
     """
 
     @type t :: %__MODULE__{
-            id: Rpc.id(),
-            jsonrpc: Rpc.jsonrpc(),
+            id: Types.id(),
+            jsonrpc: Types.jsonrpc(),
             result: String.t()
           }
     defstruct [
       :id,
       :result,
-      jsonrpc: Rpc.jsonrpc_version()
+      jsonrpc: Types.jsonrpc_version()
     ]
   end
 
@@ -98,8 +98,8 @@ defmodule Exth.Rpc.Response do
     """
 
     @type t :: %__MODULE__{
-            id: Rpc.id(),
-            jsonrpc: Rpc.jsonrpc(),
+            id: Types.id(),
+            jsonrpc: Types.jsonrpc(),
             error: %{
               code: integer(),
               message: String.t(),
@@ -109,16 +109,16 @@ defmodule Exth.Rpc.Response do
     defstruct [
       :id,
       :error,
-      jsonrpc: Rpc.jsonrpc_version()
+      jsonrpc: Types.jsonrpc_version()
     ]
   end
 
   @type t :: Success.t() | Error.t()
 
-  @spec success(Rpc.id(), String.t()) :: Success.t()
+  @spec success(Types.id(), String.t()) :: Success.t()
   def success(id, result) when not is_nil(id), do: %Success{id: id, result: result}
 
-  @spec error(Rpc.id(), integer(), String.t(), any() | nil) :: Error.t()
+  @spec error(Types.id(), integer(), String.t(), any() | nil) :: Error.t()
   def error(id, code, message, data \\ nil) when not is_nil(id) do
     %Error{id: id, error: %{code: code, message: message, data: data}}
   end

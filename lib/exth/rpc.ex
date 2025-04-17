@@ -11,15 +11,15 @@ defmodule Exth.Rpc do
     * Batch request support for better performance
     * Configurable transport layers (HTTP, custom implementations)
     * Automatic request ID generation and version management
+    * Comprehensive error handling
 
-  * Comprehensive error handling
   ## Quick Start
 
       # Create a client
       client = Rpc.new_client(:http, rpc_url: "https://eth-mainnet.example.com")
 
       # Make a simple request
-      request = Rpc.request("eth_blockNumber", [])
+      request = Rpc.raw_request("eth_blockNumber", [])
       {:ok, response} = Rpc.send(client, request)
 
   ## Request Patterns
@@ -27,21 +27,22 @@ defmodule Exth.Rpc do
   ### Client-based Requests
       # Create client once and reuse
       client = Rpc.new_client(:http, rpc_url: "https://eth-mainnet.example.com")
-      
-      # Make requests with client
-      request = Rpc.request(client, "eth_getBalance", ["0x742d...", "latest"])
-      {:ok, response} = Rpc.send(client, request)
+
+      client
+      |> Rpc.request("eth_blockNumber", [])
+      |> Rpc.request("eth_getBalance", ["0x742d...", "latest"])
+      |> Rpc.send()
 
   ### Standalone Requests
       # Build requests without client
-      request = Rpc.request("eth_blockNumber", [])
+      request = Rpc.raw_request("eth_blockNumber", [])
       {:ok, response} = Rpc.send(client, request)
 
   ### Batch Requests
       # Send multiple requests in one call
       requests = [
-        Rpc.request("eth_blockNumber", []),
-        Rpc.request("eth_gasPrice", [])
+        Rpc.raw_request("eth_blockNumber", []),
+        Rpc.raw_request("eth_gasPrice", [])
       ]
       {:ok, [block_response, gas_response]} = Rpc.send(client, requests)
 
@@ -54,40 +55,40 @@ defmodule Exth.Rpc do
 
   ## Error Handling
 
+  The module provides consistent error handling across all request types:
+
       case Rpc.send(client, request) do
-        {:ok, response} -> 
+        {:ok, response} ->
           # Handle successful response
           handle_success(response.result)
-        
-        {:error, %{code: code, message: msg}} -> 
+
+        {:error, %{code: code, message: msg}} ->
           # Handle RPC-level errors
           handle_rpc_error(code, msg)
-        
-        {:error, %Exception{} = e} -> 
+
+        {:error, %Exception{} = e} ->
           # Handle transport-level errors
           handle_transport_error(e)
       end
+
+  ## Best Practices
+
+    * Reuse client instances when possible
+    * Use batch requests for multiple calls
+    * Implement appropriate timeouts
+    * Handle errors gracefully
+    * Monitor client health
+    * Clean up resources when done
 
   See the individual function documentation for more detailed usage examples
   and options.
   """
 
+  alias __MODULE__.Call
   alias __MODULE__.Client
   alias __MODULE__.Request
+  alias __MODULE__.Types
   alias Exth.Transport
-
-  @type id :: pos_integer()
-  @type jsonrpc :: String.t()
-  @type method :: atom() | String.t()
-  @type params :: list(binary())
-
-  @jsonrpc_version "2.0"
-
-  @doc """
-  Returns the JSON-RPC protocol version used by the client.
-  """
-  @spec jsonrpc_version() :: jsonrpc()
-  def jsonrpc_version, do: @jsonrpc_version
 
   @doc """
   Creates a new JSON-RPC client with the specified transport type and options.
@@ -103,7 +104,11 @@ defmodule Exth.Rpc do
 
   ## Examples
 
+      # Create an HTTP client
       client = Rpc.new_client(:http, rpc_url: "https://eth-mainnet.example.com")
+
+      # Create a custom transport client
+      client = Rpc.new_client(:custom, module: MyTransport, rpc_url: "https://example.com")
   """
   @spec new_client(Transport.type(), keyword()) :: Client.t()
   defdelegate new_client(type, opts), to: Client, as: :new
@@ -122,22 +127,22 @@ defmodule Exth.Rpc do
 
   ## Examples
 
-      # Simple request with no parameters - includes client-generated ID
-      request = Rpc.request(client, "eth_blockNumber", [])
-      # => %Request{id: 1, method: "eth_blockNumber", params: []}
+      # Simple request with no parameters
+      client
+      |> Rpc.request("eth_blockNumber", [])
+      |> Rpc.send()
 
-      # Request with multiple parameters - next ID in sequence
-      request = Rpc.request(client, "eth_getBalance", ["0x742d...", "latest"])
-      # => %Request{id: 2, method: "eth_getBalance", params: ["0x742d...", "latest"]}
-
-      # The request can be later used with Rpc.send/2
-      {:ok, response} = Rpc.send(client, request)
+      # Chain multiple requests
+      client
+      |> Rpc.request("eth_blockNumber", [])
+      |> Rpc.request("eth_getBalance", ["0x742d...", "latest"])
+      |> Rpc.send()
   """
-  @spec request(Client.t(), method(), params()) :: Request.t()
+  @spec request(Client.t() | Call.t(), Types.method(), Types.params()) :: Call.t()
   defdelegate request(client, method, params), to: Client
 
   @doc """
-  Builds a new JSON-RPC request without requiring a client instance.
+  Builds a new JSON-RPC raw request without requiring a client instance.
 
   This is a convenience function for creating requests that can be later used
   with a client. Useful when building multiple requests before sending them.
@@ -153,23 +158,45 @@ defmodule Exth.Rpc do
 
   ## Examples
 
-      # Create standalone requests - no IDs yet
-      request1 = Rpc.request("eth_blockNumber", [])
-      # => %Request{id: nil, method: "eth_blockNumber", params: []}
+      # Create standalone requests
+      request1 = Rpc.raw_request("eth_blockNumber", [])
+      request2 = Rpc.raw_request("eth_getBalance", ["0x742d...", "latest"])
 
-      request2 = Rpc.request("eth_getBalance", ["0x742d...", "latest"])
-      # => %Request{id: nil, method: "eth_getBalance", params: ["0x742d...", "latest"]}
-
-      # When sent with a client, IDs will be assigned
+      # Send single request
       {:ok, response} = Rpc.send(client, request1)
-      # request1 now has id: 1
 
-      # In batch requests, each request gets a sequential ID
+      # Send batch requests
       {:ok, responses} = Rpc.send(client, [request1, request2])
-      # request1 has id: 2, request2 has id: 3
   """
-  @spec request(method(), params()) :: Request.t()
-  defdelegate request(method, params), to: Client
+  @spec raw_request(Types.method(), Types.params(), Types.id() | nil) :: Request.t()
+  defdelegate raw_request(method, params, id \\ nil), to: Request, as: :new
+
+  @doc """
+  Sends a JSON-RPC call chain using the client's configured transport.
+
+  This function is used with the Rpc.Call to send a chain of requests that
+  were built using `request/3`.
+
+  ## Returns
+    * `{:ok, response}` - Successful single request with decoded response
+    * `{:ok, responses}` - Successful batch request with list of decoded responses
+    * `{:error, reason}` - Request failed with error details
+
+  ## Examples
+
+      # Send a single request
+      client
+      |> Rpc.request("eth_blockNumber", [])
+      |> Rpc.send()
+
+      # Send multiple requests
+      client
+      |> Rpc.request("eth_blockNumber", [])
+      |> Rpc.request("eth_getBalance", ["0x742d...", "latest"])
+      |> Rpc.send()
+  """
+  @spec send(Call.t()) :: Client.send_response_type()
+  defdelegate send(rpc_call), to: Client
 
   @doc """
   Sends one or more JSON-RPC requests using the client's configured transport.
@@ -190,19 +217,15 @@ defmodule Exth.Rpc do
   ## Examples
 
       # Single request
+      request = Rpc.raw_request("eth_blockNumber", [])
       {:ok, response} = Rpc.send(client, request)
-      block_number = response.result
 
-      # Batch request for better performance
+      # Batch request
       requests = [
-        Rpc.request("eth_blockNumber", []),
-        Rpc.request("eth_gasPrice", [])
+        Rpc.raw_request("eth_blockNumber", []),
+        Rpc.raw_request("eth_gasPrice", [])
       ]
-      {:ok, [block_response, gas_response]} = Rpc.send(client, requests)
-
-      # You can also invert the arguments
-      Rpc.request("eth_blockNumber", [])
-      |> Rpc.send(client)
+      {:ok, responses} = Rpc.send(client, requests)
 
       # Error handling
       case Rpc.send(client, request) do

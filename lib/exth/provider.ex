@@ -232,11 +232,9 @@ defmodule Exth.Provider do
               unquote_splicing(param_types |> Enum.map(fn _ -> quote do: term() end))
             ) :: rpc_response()
       def unquote(method_name)(unquote_splicing(function_params)) do
-        client = get_client()
-
-        unquote(rpc_method)
-        |> Rpc.request([unquote_splicing(request_params)])
-        |> Rpc.send(client)
+        get_client()
+        |> Rpc.request(unquote(rpc_method), [unquote_splicing(request_params)])
+        |> Rpc.send()
         |> handle_response()
       end
     end

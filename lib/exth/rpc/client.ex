@@ -12,8 +12,11 @@ defmodule Exth.Rpc.Client do
     * Request/response lifecycle management
     * Batch request support
     * Error handling
+    * Fluent API for chaining requests
 
   ## Usage
+
+  ### Basic Usage
 
       # Create a new client
       client = Client.new(:http,
@@ -21,13 +24,31 @@ defmodule Exth.Rpc.Client do
         timeout: 30_000
       )
 
-      # Create a request
-      request = Client.request(client, "eth_blockNumber", [])
+      # Create a raw request
+      rpc_call = Client.request(client, "eth_blockNumber", [])
 
       # Send the request
+      {:ok, response} = Client.send(rpc_call)
+
+      # Send batch requests
+      {:ok, responses} = 
+        client
+        |> Client.request("eth_blockNumber", [])
+        |> Client.request("eth_getBalance", [address, block])
+        |> Client.send()
+
+  ### Using Raw Requests
+      # Create a raw request
+      request = Request.new("eth_blockNumber", [], 1)
+
+      # Send the request
+      {:ok, response} = Client.send(request, client)
+      # or
       {:ok, response} = Client.send(client, request)
 
       # Send batch requests
+      {:ok, responses} = Client.send([request1, request2], client)
+      # or
       {:ok, responses} = Client.send(client, [request1, request2])
 
   ## Client Configuration
@@ -35,9 +56,7 @@ defmodule Exth.Rpc.Client do
   The client accepts the following options:
 
     * `:rpc_url` - (Required) The endpoint URL
-    * `:transport_type` - Transport to use (`:http` or `:custom`)
-    * `:timeout` - Request timeout in milliseconds
-    * `:headers` - Additional HTTP headers (HTTP only)
+    * other options that are specific to the transport type
 
   ## Request ID Generation
 
@@ -74,25 +93,11 @@ defmodule Exth.Rpc.Client do
     * Monitor client health
     * Clean up resources when done
 
-  ## Examples
-
-      # Basic request
-      client = Client.new(:http, rpc_url: "https://eth-mainnet.example.com")
-      request = Client.request(client, "eth_blockNumber", [])
-      {:ok, block_number} = Client.send(client, request)
-
-      # Batch request
-      requests = [
-        Client.request(client, "eth_blockNumber", []),
-        Client.request(client, "eth_gasPrice", [])
-      ]
-      {:ok, [block_number, gas_price]} = Client.send(client, requests)
-
-  See `Exth.Transport` for transport details and `Exth.Rpc.Request`
-  for request formatting.
+  See `Exth.Transport` for transport details.
   """
-  alias Exth.Rpc
+  alias Exth.Rpc.Call
   alias Exth.Rpc.Request
+  alias Exth.Rpc.Types
   alias Exth.Transport
   alias Exth.Transport.Transportable
 
@@ -115,20 +120,31 @@ defmodule Exth.Rpc.Client do
     }
   end
 
-  @spec request(t(), Rpc.method(), Rpc.params()) :: Request.t()
+  @spec request(t() | Call.t(), Types.method(), Types.params()) :: Call.t()
   def request(%__MODULE__{} = client, method, params)
       when is_binary(method) or is_atom(method) do
-    id = generate_id(client)
-    Request.new(method, params, id)
+    client
+    |> Call.new()
+    |> Call.add_request(method, params)
   end
 
-  @spec request(Rpc.method(), Rpc.params()) :: Request.t()
-  def request(method, params) do
-    Request.new(method, params)
+  def request(%Call{} = call, method, params) do
+    Call.add_request(call, method, params)
   end
 
-  @type send_argument_type :: t() | Request.t() | [Request.t()] | []
+  @type send_argument_type :: t() | Call.t() | Request.t() | [Request.t()] | []
   @type send_response_type :: Transport.call_response() | {:error, :duplicate_ids}
+
+  @spec send(Call.t()) :: send_response_type()
+  def send(%Call{} = call) do
+    client = Call.get_client(call)
+    requests = Call.get_requests(call)
+
+    case requests do
+      [request] -> send_single(client, request)
+      requests -> send_batch(client, requests)
+    end
+  end
 
   @spec send(send_argument_type(), send_argument_type()) :: send_response_type()
   def send(%__MODULE__{} = client, %Request{} = request) do
@@ -145,6 +161,11 @@ defmodule Exth.Rpc.Client do
 
   def send(requests, %__MODULE__{} = client) when is_list(requests) do
     send_batch(client, requests)
+  end
+
+  @spec generate_id(t()) :: non_neg_integer()
+  def generate_id(%__MODULE__{counter: counter}) do
+    :atomics.add_get(counter, 1, 1)
   end
 
   ###
@@ -198,9 +219,5 @@ defmodule Exth.Rpc.Client do
     |> generate_id()
     |> Stream.iterate(fn _ -> generate_id(client) end)
     |> Enum.find(fn id -> not MapSet.member?(existing_ids, id) end)
-  end
-
-  defp generate_id(%__MODULE__{counter: counter}) do
-    :atomics.add_get(counter, 1, 1)
   end
 end
