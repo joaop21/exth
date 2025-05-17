@@ -172,7 +172,7 @@ defmodule Exth.Provider do
       @type rpc_response :: {:ok, term()} | {:error, term()}
 
       @default_block_tag "latest"
-      @provider_app Keyword.fetch!(opts, :otp_app)
+      @provider_app Keyword.get(opts, :otp_app)
       @provider_key __MODULE__
       @provider_inline_opts opts
 
