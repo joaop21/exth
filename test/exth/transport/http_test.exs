@@ -13,7 +13,7 @@ defmodule Exth.Transport.HttpTest do
   setup_all do
     %{
       base_opts: valid_transport_opts(),
-      sample_request: Request.new("eth_blockNumber", [], 1),
+      sample_request: Request.new("eth_blockNumber", [], 1) |> Request.serialize(),
       known_methods: Exth.TestTransport.get_known_methods()
     }
   end
@@ -86,7 +86,8 @@ defmodule Exth.Transport.HttpTest do
 
     test "handles successful response", %{transport: transport, sample_request: request} do
       mock_success("0x1")
-      assert {:ok, %Response.Success{result: "0x1"}} = Http.call(transport, request)
+      assert {:ok, encoded_response} = Http.call(transport, request)
+      assert {:ok, %Response.Success{result: "0x1"}} = Response.deserialize(encoded_response)
     end
 
     test "handles various successful response types", %{transport: transport} do
@@ -99,8 +100,9 @@ defmodule Exth.Transport.HttpTest do
 
       for {result, method} <- test_cases do
         mock_success(result)
-        request = Request.new(method, [], 1)
-        assert {:ok, %Response.Success{result: ^result}} = Http.call(transport, request)
+        encoded_request = Request.new(method, [], 1) |> Request.serialize()
+        assert {:ok, encoded_response} = Http.call(transport, encoded_request)
+        assert {:ok, %Response.Success{result: ^result}} = Response.deserialize(encoded_response)
       end
     end
 
@@ -115,10 +117,12 @@ defmodule Exth.Transport.HttpTest do
 
       for {code, message} <- error_cases do
         mock_error(code, message)
-        request = Request.new("test_method", [], 1)
+        encoded_request = Request.new("test_method", [], 1) |> Request.serialize()
+
+        assert {:ok, encoded_response} = Http.call(transport, encoded_request)
 
         assert {:ok, %Response.Error{error: %{code: ^code, message: ^message}}} =
-                 Http.call(transport, request)
+                 Response.deserialize(encoded_response)
       end
     end
 
