@@ -16,9 +16,6 @@ defmodule Exth.Transport.Http do
       {:ok, response} = Transportable.call(transport, request)
   """
 
-  alias Exth.Rpc.Request
-  alias Exth.Rpc.Response
-
   @typedoc "HTTP transport configuration"
   @type t :: %__MODULE__{
           client: Tesla.Client.t()
@@ -34,12 +31,11 @@ defmodule Exth.Transport.Http do
   Makes an HTTP request to the JSON-RPC endpoint.
 
   Returns:
-    * `{:ok, responses}` - Successful request with decoded response or responses
+    * `{:ok, response}` - Successful request with encoded response
     * `{:error, {:http_error, status}}` - HTTP error response
     * `{:error, reason}` - Other errors (network, timeout, etc)
   """
-  @spec call(t(), Request.t() | [Request.t()]) ::
-          {:ok, Response.t() | [Response.t()]} | {:error, term()}
+  @spec call(t(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def call(%__MODULE__{client: client}, request) do
     case Tesla.post(client, "", request) do
       {:ok, %Tesla.Env{status: 200, body: response}} -> {:ok, response}
