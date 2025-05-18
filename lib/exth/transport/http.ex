@@ -84,7 +84,6 @@ defmodule Exth.Transport.Http do
     [
       {Tesla.Middleware.BaseUrl, config[:rpc_url]},
       {Tesla.Middleware.Headers, build_headers(config[:headers])},
-      {Tesla.Middleware.JSON, encode: &Request.serialize/1, decode: &Response.deserialize/1},
       {Tesla.Middleware.Timeout, timeout: config[:timeout]}
     ]
   end
