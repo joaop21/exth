@@ -34,7 +34,6 @@ defmodule Exth.Transport do
 
       # Make requests
       {:ok, response} = Transport.call(transport, request)
-      {:ok, responses} = Transport.call(transport, [request1, request2])
 
   ## Configuration
 
@@ -83,7 +82,7 @@ defmodule Exth.Transport do
 
   The module uses consistent error handling:
 
-    * `{:ok, response}` - Successful request with decoded response
+    * `{:ok, response}` - Successful request with response
     * `{:ok, responses}` - Successful batch request with responses
     * `{:error, reason}` - Request failed with detailed reason
 
@@ -106,8 +105,6 @@ defmodule Exth.Transport do
   """
 
   alias __MODULE__.Transportable
-  alias Exth.Rpc.Request
-  alias Exth.Rpc.Response
 
   @typedoc """
   Supported transport types:
@@ -162,19 +159,18 @@ defmodule Exth.Transport do
   end
 
   @type error_reason :: Exception.t() | String.t() | term()
-  @type call_response :: {:ok, Response.t() | [Response.t()]} | {:error, error_reason()}
 
   @doc """
   Makes a request using the configured transport.
 
   ## Parameters
     * `transportable` - The configured transport instance
-    * `request` - The JSON-RPC request to send
+    * `request` - The JSON-RPC encoded request to send
 
   ## Returns
-    * `{:ok, response}` - Successful request with decoded response
+    * `{:ok, response}` - Successful request with encoded response
     * `{:error, reason}` - Request failed with error reason
   """
-  @spec call(Transportable.t(), Request.t() | [Request.t()]) :: call_response()
-  def call(transportable, request), do: Transportable.call(transportable, request)
+  @spec call(Transportable.t(), String.t()) :: {:ok, String.t()} | {:error, error_reason()}
+  def call(transportable, encoded_request), do: Transportable.call(transportable, encoded_request)
 end
