@@ -68,22 +68,31 @@ defmodule Exth.TransportTest do
             "eth_chainId" => "0x1",
             "net_version" => "1"
           } do
-        request = Request.new(method, [], System.unique_integer([:positive]))
-        assert {:ok, %Response.Success{result: ^expected}} = Transport.call(transport, request)
+        {:ok, encoded_request} =
+          Request.new(method, [], System.unique_integer([:positive])) |> Request.serialize()
+
+        assert {:ok, encoded_response} = Transport.call(transport, encoded_request)
+
+        assert {:ok, %Response.Success{result: ^expected}} =
+                 Response.deserialize(encoded_response)
       end
     end
 
     test "handles unknown methods", %{transport: transport} do
-      request = Request.new("unknown_method", [], 1)
+      {:ok, encoded_request} = Request.new("unknown_method", [], 1) |> Request.serialize()
 
-      assert {:ok, %Response.Error{error: %{code: -32_601}}} = Transport.call(transport, request)
+      assert {:ok, encoded_response} = Transport.call(transport, encoded_request)
+
+      assert {:ok, %Response.Error{error: %{code: -32_601}}} =
+               Response.deserialize(encoded_response)
     end
 
     test "preserves request ID in response", %{transport: transport} do
       id = System.unique_integer([:positive])
-      request = Request.new("eth_blockNumber", [], id)
+      {:ok, encoded_request} = Request.new("eth_blockNumber", [], id) |> Request.serialize()
 
-      assert {:ok, %Response.Success{id: ^id}} = Transport.call(transport, request)
+      assert {:ok, encoded_response} = Transport.call(transport, encoded_request)
+      assert {:ok, %Response.Success{id: ^id}} = Response.deserialize(encoded_response)
     end
   end
 end
