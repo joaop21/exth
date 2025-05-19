@@ -50,6 +50,9 @@ defprotocol Exth.Transport.Transportable do
   @spec new(t, keyword()) :: t
   def new(transport, opts)
 
+  @type error_reason :: Exception.t() | String.t() | term()
+  @type call_response :: {:ok, String.t()} | {:error, error_reason()}
+
   @doc """
   Makes a request using the configured transport.
 
@@ -61,6 +64,6 @@ defprotocol Exth.Transport.Transportable do
     * `{:ok, response}` - Successful request with encoded response
     * `{:error, reason}` - Request failed with error reason (Exception.t() or map())
   """
-  @spec call(t, String.t()) :: {:ok, String.t()} | {:error, Exception.t()}
+  @spec call(t, String.t()) :: call_response()
   def call(transport, request)
 end

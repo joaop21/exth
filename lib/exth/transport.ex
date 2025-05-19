@@ -158,8 +158,7 @@ defmodule Exth.Transport do
     raise(ArgumentError, "invalid transport type: #{inspect(type)}")
   end
 
-  @type error_reason :: Exception.t() | String.t() | term()
-  @type call_response :: {:ok, String.t()} | {:error, error_reason()}
+  @type call_response :: Transportable.call_response()
 
   @doc """
   Makes a request using the configured transport.
