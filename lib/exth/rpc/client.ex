@@ -97,6 +97,7 @@ defmodule Exth.Rpc.Client do
   """
   alias Exth.Rpc.Call
   alias Exth.Rpc.Request
+  alias Exth.Rpc.Response
   alias Exth.Rpc.Types
   alias Exth.Transport
   alias Exth.Transport.Transportable
@@ -139,28 +140,21 @@ defmodule Exth.Rpc.Client do
   def send(%Call{} = call) do
     client = Call.get_client(call)
     requests = Call.get_requests(call)
+    do_send(client, requests)
 
     case requests do
-      [request] -> send_single(client, request)
-      requests -> send_batch(client, requests)
+      [request] -> do_send(client, request)
+      requests -> do_send(client, requests)
     end
   end
 
   @spec send(send_argument_type(), send_argument_type()) :: send_response_type()
-  def send(%__MODULE__{} = client, %Request{} = request) do
-    send_single(client, request)
+  def send(%__MODULE__{} = client, request) do
+    do_send(client, request)
   end
 
-  def send(%Request{} = request, %__MODULE__{} = client) do
-    send_single(client, request)
-  end
-
-  def send(%__MODULE__{} = client, requests) when is_list(requests) do
-    send_batch(client, requests)
-  end
-
-  def send(requests, %__MODULE__{} = client) when is_list(requests) do
-    send_batch(client, requests)
+  def send(request, %__MODULE__{} = client) do
+    do_send(client, request)
   end
 
   @spec generate_id(t()) :: non_neg_integer()
@@ -172,27 +166,25 @@ defmodule Exth.Rpc.Client do
   ### Private Functions
   ###
 
-  defp send_single(%__MODULE__{} = client, %Request{} = request) do
-    request =
-      if is_nil(request.id) do
-        %Request{request | id: generate_id(client)}
-      else
-        request
-      end
-
-    Transport.call(client.transport, request)
-  end
-
-  defp send_batch(%__MODULE__{}, []), do: {:ok, []}
-
-  defp send_batch(%__MODULE__{} = client, requests) do
-    with :ok <- validate_unique_ids(requests) do
-      requests = assign_missing_ids(client, requests)
-      Transport.call(client.transport, requests)
+  defp do_send(%__MODULE__{} = client, %Request{} = request) do
+    case do_send(client, [request]) do
+      {:ok, [result]} -> {:ok, result}
+      {:error, reason} -> {:error, reason}
     end
   end
 
-  defp validate_unique_ids(requests) do
+  defp do_send(%__MODULE__{}, []), do: {:ok, []}
+
+  defp do_send(%__MODULE__{} = client, requests) when is_list(requests) do
+    with :ok <- validate_unique_ids(requests),
+         requests <- assign_missing_ids(client, requests),
+         {:ok, encoded_requests} <- Request.serialize(requests),
+         {:ok, encoded_response} <- Transport.call(client.transport, encoded_requests) do
+      Response.deserialize(encoded_response)
+    end
+  end
+
+  defp validate_unique_ids(requests) when is_list(requests) do
     existing_ids = requests |> Enum.map(& &1.id) |> Enum.reject(&is_nil/1)
 
     if length(existing_ids) == length(Enum.uniq(existing_ids)) do
@@ -202,7 +194,7 @@ defmodule Exth.Rpc.Client do
     end
   end
 
-  defp assign_missing_ids(client, requests) do
+  defp assign_missing_ids(client, requests) when is_list(requests) do
     existing_ids = MapSet.new(requests, & &1.id)
 
     Enum.map(requests, fn request ->

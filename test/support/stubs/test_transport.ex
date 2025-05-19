@@ -17,17 +17,22 @@ end
 defimpl Exth.Transport.Transportable, for: Exth.TestTransport do
   def new(_transport, opts), do: %Exth.TestTransport{config: opts}
 
-  def call(_transport, %{method: method, id: id} = _request) do
+  def call(transport, encoded_request) do
+    decoded_request = JSON.decode!(encoded_request)
+    do_call(transport, decoded_request)
+  end
+
+  defp do_call(_transport, %{"method" => method, "id" => id} = _request) do
     case Map.get(Exth.TestTransport.get_known_methods(), method) do
-      nil -> {:ok, Exth.Rpc.Response.error(id, -32_601, "Method not found")}
-      result -> {:ok, Exth.Rpc.Response.success(id, result)}
+      nil -> {:ok, JSON.encode!(%{id: id, error: %{code: -32_601, message: "Method not found"}})}
+      result -> {:ok, JSON.encode!(%{id: id, result: result})}
     end
   end
 
-  def call(transport, requests) do
+  defp do_call(transport, requests) do
     requests
-    |> Enum.map(&call(transport, &1))
-    |> Enum.map(fn {:ok, response} -> response end)
-    |> then(fn response -> {:ok, response} end)
+    |> Enum.map(&do_call(transport, &1))
+    |> Enum.map_join(",", fn {:ok, response} -> response end)
+    |> then(fn response -> {:ok, "[#{response}]"} end)
   end
 end
