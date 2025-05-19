@@ -159,6 +159,7 @@ defmodule Exth.Transport do
   end
 
   @type error_reason :: Exception.t() | String.t() | term()
+  @type call_response :: {:ok, String.t()} | {:error, error_reason()}
 
   @doc """
   Makes a request using the configured transport.
@@ -171,6 +172,6 @@ defmodule Exth.Transport do
     * `{:ok, response}` - Successful request with encoded response
     * `{:error, reason}` - Request failed with error reason
   """
-  @spec call(Transportable.t(), String.t()) :: {:ok, String.t()} | {:error, error_reason()}
+  @spec call(Transportable.t(), String.t()) :: call_response()
   def call(transportable, encoded_request), do: Transportable.call(transportable, encoded_request)
 end
