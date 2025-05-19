@@ -184,8 +184,6 @@ defmodule Exth.Rpc.Client do
     end
   end
 
-  defp validate_unique_ids(request) when is_map(request), do: :ok
-
   defp validate_unique_ids(requests) when is_list(requests) do
     existing_ids = requests |> Enum.map(& &1.id) |> Enum.reject(&is_nil/1)
 
@@ -194,14 +192,6 @@ defmodule Exth.Rpc.Client do
     else
       {:error, :duplicate_ids}
     end
-  end
-
-  defp assign_missing_ids(client, %Request{id: nil} = request) do
-    %Request{request | id: generate_id(client)}
-  end
-
-  defp assign_missing_ids(_client, %Request{} = request) do
-    request
   end
 
   defp assign_missing_ids(client, requests) when is_list(requests) do
