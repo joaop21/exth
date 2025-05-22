@@ -134,7 +134,7 @@ defmodule Exth.Rpc.Response do
       iex> Exth.Rpc.Response.deserialize(~s({"jsonrpc": "2.0", "error": {"code": -32_601, "message": "Method not found"}, "id": 1}))
       {:ok, %Exth.Rpc.Response.Error{id: 1, error: %{code: -32_601, message: "Method not found"}}}
   """
-  @spec deserialize(String.t()) :: {:ok, t() | [t()]} | {:error, Exception.t()}
+  @spec deserialize(String.t()) :: {:ok, t() | [t()]} | {:error, term()}
   def deserialize(json) when is_binary(json) do
     with {:ok, response} <- JSON.decode(json) do
       do_decode_response(response)
