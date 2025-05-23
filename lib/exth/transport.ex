@@ -111,7 +111,7 @@ defmodule Exth.Transport do
   * `:http` - HTTP/HTTPS transport
   * `:custom` - Custom transport implementation
   """
-  @type type :: :custom | :http
+  @type type :: :custom | :http | :websocket
 
   @typedoc """
   Transport configuration options.
@@ -151,6 +151,10 @@ defmodule Exth.Transport do
   defp get_transport_module(:http, _opts), do: __MODULE__.Http
 
   defp get_transport_module(:custom, opts) do
+    opts[:module] || raise ArgumentError, "missing required option :module"
+  end
+
+  defp get_transport_module(:websocket, opts) do
     opts[:module] || raise ArgumentError, "missing required option :module"
   end
 

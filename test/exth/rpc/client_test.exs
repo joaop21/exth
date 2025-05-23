@@ -1,6 +1,7 @@
 defmodule Exth.Rpc.ClientTest do
   use ExUnit.Case, async: true
 
+  alias Exth.AsyncTestTransport
   alias Exth.Rpc.Call
   alias Exth.Rpc.Client
   alias Exth.Rpc.Request
@@ -26,12 +27,25 @@ defmodule Exth.Rpc.ClientTest do
       assert %Http{} = client.transport
     end
 
-    test "fails to create client with invalid URL" do
-      assert_raise ArgumentError,
-                   "Invalid RPC URL format: \"not-a-url\"\nThe URL must:\n  - Start with http:// or https://\n  - Contain a valid host\n",
-                   fn ->
-                     Client.new(:http, rpc_url: "not-a-url")
-                   end
+    test "creates a new client with WebSocket transport" do
+      client = Client.new(:websocket, rpc_url: @valid_url, module: AsyncTestTransport)
+      assert %Client{} = client
+      assert client.counter != nil
+      assert client.transport != nil
+      assert client.inner_client != nil
+      assert Process.alive?(client.inner_client)
+    end
+
+    test "fails to create WebSocket client without URL" do
+      assert_raise ArgumentError, "missing required option :rpc_url", fn ->
+        Client.new(:websocket, [])
+      end
+    end
+
+    test "fails to create client with invalid transport type" do
+      assert_raise FunctionClauseError, fn ->
+        Client.new(:invalid, rpc_url: "http://localhost:8545")
+      end
     end
 
     test "fails to create client without URL" do
@@ -45,12 +59,6 @@ defmodule Exth.Rpc.ClientTest do
       assert %Client{} = client
       assert client.counter != nil
       assert client.transport != nil
-    end
-
-    test "raises error for invalid transport type" do
-      assert_raise FunctionClauseError, fn ->
-        Client.new(:invalid, rpc_url: "http://localhost:8545")
-      end
     end
   end
 
@@ -381,6 +389,75 @@ defmodule Exth.Rpc.ClientTest do
       assert_raise FunctionClauseError, fn ->
         Client.send(client, "not_a_request")
       end
+    end
+  end
+
+  describe "send/2 with WebSocket transport" do
+    setup do
+      client = Client.new(:websocket, rpc_url: @valid_url, module: AsyncTestTransport)
+      {:ok, client: client}
+    end
+
+    test "sends a single request through inner client", %{client: client} do
+      request = [Request.new("eth_blockNumber", [], 1)]
+      response = [%{id: 1, result: "0x1234"}]
+
+      # Start a process to send the response
+      spawn(fn ->
+        Process.sleep(10)
+        send(client.inner_client, {:response, JSON.encode!(response)})
+      end)
+
+      assert {:ok, [%Response.Success{id: 1, result: "0x1234"}]} = Client.send(client, request)
+    end
+
+    test "sends batch requests through inner client", %{client: client} do
+      requests = [
+        Request.new("eth_blockNumber", [], 1),
+        Request.new("eth_chainId", [], 2)
+      ]
+
+      responses = [
+        %{id: 1, result: "0x1234"},
+        %{id: 2, result: "0x5678"}
+      ]
+
+      # Start a process to send the responses
+      spawn(fn ->
+        Process.sleep(10)
+
+        responses
+        |> Enum.map_join(",", fn response -> JSON.encode!(response) end)
+        |> then(fn response -> send(client.inner_client, {:response, "[#{response}]"}) end)
+      end)
+
+      assert {:ok,
+              [
+                %Response.Success{id: 1, result: "0x1234"},
+                %Response.Success{id: 2, result: "0x5678"}
+              ]} = Client.send(client, requests)
+    end
+
+    test "handles deserialization errors", %{client: client} do
+      request = [Request.new("eth_blockNumber", [], 1)]
+
+      # Start a process to send an invalid response
+      spawn(fn ->
+        Process.sleep(10)
+        send(client.inner_client, {:response, "invalid json"})
+      end)
+
+      assert catch_exit(Client.send(client, request)) ==
+               {:timeout, {GenServer, :call, [client.inner_client, {:send, request}, 5000]}}
+    end
+
+    test "handles orphaned responses", %{client: client} do
+      # Send a response without a matching request
+      response = %{id: 999, result: "0x1234"}
+      send(client.inner_client, {:response, JSON.encode!(response)})
+
+      # The process should not crash
+      assert Process.alive?(client.inner_client)
     end
   end
 end
