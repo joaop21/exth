@@ -79,11 +79,11 @@ defmodule Exth.Rpc.InnerClient do
 
   # Private functions
 
-  defp get_request_id([%Request{} = request]), do: request.id
-  defp get_request_id(requests), do: Enum.map_join(requests, "_", & &1["id"])
+  defp get_request_id(%{id: id}), do: id
+  defp get_request_id(requests), do: Enum.map_join(requests, "_", &get_request_id/1)
 
-  defp get_response_id([%{id: id}]), do: id
-  defp get_response_id(responses), do: Enum.map_join(responses, "_", & &1["id"])
+  defp get_response_id(%{id: id}), do: id
+  defp get_response_id(responses), do: Enum.map_join(responses, "_", &get_response_id/1)
 
   defp send_request(transport, requests) do
     {:ok, encoded_request} = Request.serialize(requests)
