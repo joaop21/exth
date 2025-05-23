@@ -38,9 +38,10 @@ defmodule Exth.MixProject do
 
   defp deps do
     [
-      {:mint, "~> 1.7", optional: true, only: :dev},
       # HTTP
       {:tesla, "~> 1.14"},
+      # Websocket
+      {:fresh, "~> 0.4.4"},
 
       # ex_check
       {:ex_check, "~> 0.16.0", only: :dev, runtime: false},
