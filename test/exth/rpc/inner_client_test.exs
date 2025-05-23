@@ -30,8 +30,8 @@ defmodule Exth.Rpc.InnerClientTest do
     test "sends a request and receives a response", %{client: client, transport: transport} do
       :ok = InnerClient.set_transport(client, transport)
 
-      request = %Request{id: 1, method: "eth_blockNumber", params: []}
-      response = %{id: 1, result: "test"}
+      request = [%Request{id: 1, method: "eth_blockNumber", params: []}]
+      response = [%{id: 1, result: "test"}]
 
       # Start a process to send the response
       spawn(fn ->
@@ -39,13 +39,13 @@ defmodule Exth.Rpc.InnerClientTest do
         send(client, {:response, Jason.encode!(response)})
       end)
 
-      assert {:ok, %Response.Success{id: 1, result: "test"}} = InnerClient.call(client, request)
+      assert {:ok, [%Response.Success{id: 1, result: "test"}]} = InnerClient.call(client, request)
     end
 
     test "handles deserialization errors", %{client: client, transport: transport} do
       :ok = InnerClient.set_transport(client, transport)
 
-      request = %Request{id: 1, method: "test", params: []}
+      request = [%Request{id: 1, method: "test", params: []}]
 
       # Start a process to send an invalid response
       spawn(fn ->

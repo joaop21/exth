@@ -22,9 +22,9 @@ defmodule Exth.Rpc.InnerClient do
     GenServer.call(client, {:set_transport, transport}, @call_timeout)
   end
 
-  @spec call(pid(), Request.t() | [Request.t()]) :: {:ok, Response.t()} | {:error, term()}
-  def call(client, request, timeout \\ @call_timeout) do
-    GenServer.call(client, {:send, request}, timeout)
+  @spec call(pid(), [Request.t()]) :: {:ok, [Response.t()]} | {:error, term()}
+  def call(client, requests, timeout \\ @call_timeout) do
+    GenServer.call(client, {:send, requests}, timeout)
   end
 
   # Server Callbacks
@@ -43,9 +43,10 @@ defmodule Exth.Rpc.InnerClient do
   end
 
   @impl true
-  def handle_call({:send, %Request{} = request}, from, state) do
-    :ets.insert(state.request_table, {request.id, from})
-    send_request(state.transport, request)
+  def handle_call({:send, requests}, from, state) do
+    request_id = get_request_id(requests)
+    :ets.insert(state.request_table, {request_id, from})
+    send_request(state.transport, requests)
     {:noreply, state}
   end
 
@@ -57,7 +58,9 @@ defmodule Exth.Rpc.InnerClient do
   def handle_info({:response, encoded_response}, state) do
     case Response.deserialize(encoded_response) do
       {:ok, response} ->
-        case :ets.lookup(state.request_table, response.id) do
+        response_id = get_response_id(response)
+
+        case :ets.lookup(state.request_table, response_id) do
           [{id, from}] ->
             :ets.delete(state.request_table, id)
             GenServer.reply(from, {:ok, response})
@@ -75,6 +78,12 @@ defmodule Exth.Rpc.InnerClient do
   end
 
   # Private functions
+
+  defp get_request_id([%Request{} = request]), do: request.id
+  defp get_request_id(requests), do: Enum.map_join(requests, "_", & &1["id"])
+
+  defp get_response_id([%{id: id}]), do: id
+  defp get_response_id(responses), do: Enum.map_join(responses, "_", & &1["id"])
 
   defp send_request(transport, requests) do
     {:ok, encoded_request} = Request.serialize(requests)
