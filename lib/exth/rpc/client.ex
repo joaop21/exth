@@ -31,7 +31,7 @@ defmodule Exth.Rpc.Client do
       {:ok, response} = Client.send(rpc_call)
 
       # Send batch requests
-      {:ok, responses} = 
+      {:ok, responses} =
         client
         |> Client.request("eth_blockNumber", [])
         |> Client.request("eth_getBalance", [address, block])
@@ -96,29 +96,45 @@ defmodule Exth.Rpc.Client do
   See `Exth.Transport` for transport details.
   """
   alias Exth.Rpc.Call
+  alias Exth.Rpc.InnerClient
   alias Exth.Rpc.Request
   alias Exth.Rpc.Response
   alias Exth.Rpc.Types
   alias Exth.Transport
   alias Exth.Transport.Transportable
 
-  @transport_types [:http, :custom]
+  @transport_types [:http, :custom, :websocket]
 
   @type t :: %__MODULE__{
           counter: :atomics.atomics_ref(),
-          transport: Transportable.t()
+          transport: Transportable.t(),
+          inner_client: pid() | nil
         }
 
-  defstruct [:counter, :transport]
+  defstruct [:counter, :transport, :inner_client]
 
   @spec new(Transport.type(), keyword()) :: t()
   def new(type, opts) when type in @transport_types do
-    transport = Transport.new(type, opts)
+    case type do
+      :websocket ->
+        {:ok, inner_client} = InnerClient.new()
+        transport = Transport.new(type, opts)
+        InnerClient.set_transport(inner_client, transport)
 
-    %__MODULE__{
-      counter: :atomics.new(1, signed: false),
-      transport: transport
-    }
+        %__MODULE__{
+          counter: :atomics.new(1, signed: false),
+          transport: transport,
+          inner_client: inner_client
+        }
+
+      _ ->
+        transport = Transport.new(type, opts)
+
+        %__MODULE__{
+          counter: :atomics.new(1, signed: false),
+          transport: transport
+        }
+    end
   end
 
   @spec request(t() | Call.t(), Types.method(), Types.params()) :: Call.t()
@@ -175,12 +191,21 @@ defmodule Exth.Rpc.Client do
 
   defp do_send(%__MODULE__{}, []), do: {:ok, []}
 
-  defp do_send(%__MODULE__{} = client, requests) when is_list(requests) do
+  defp do_send(%__MODULE__{inner_client: nil} = client, requests)
+       when is_list(requests) do
     with :ok <- validate_unique_ids(requests),
          requests <- assign_missing_ids(client, requests),
          {:ok, encoded_requests} <- Request.serialize(requests),
          {:ok, encoded_response} <- Transport.call(client.transport, encoded_requests) do
       Response.deserialize(encoded_response)
+    end
+  end
+
+  defp do_send(%__MODULE__{inner_client: inner_client} = client, requests)
+       when is_list(requests) do
+    with :ok <- validate_unique_ids(requests),
+         requests <- assign_missing_ids(client, requests) do
+      InnerClient.call(inner_client, requests)
     end
   end
 
