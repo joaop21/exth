@@ -118,6 +118,14 @@ defmodule Exth.Rpc.Client do
     case type do
       :websocket ->
         {:ok, inner_client} = InnerClient.new()
+
+        opts =
+          Keyword.merge(opts,
+            dispatch_callback: fn encoded_response ->
+              Process.send(inner_client, {:response, encoded_response}, [])
+            end
+          )
+
         transport = Transport.new(type, opts)
         InnerClient.set_transport(inner_client, transport)
 
@@ -156,7 +164,6 @@ defmodule Exth.Rpc.Client do
   def send(%Call{} = call) do
     client = Call.get_client(call)
     requests = Call.get_requests(call)
-    do_send(client, requests)
 
     case requests do
       [request] -> do_send(client, request)

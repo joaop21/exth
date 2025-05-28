@@ -17,6 +17,7 @@ defmodule Exth.Transport do
 
   Currently supported:
     * `:http` - HTTP/HTTPS transport using Tesla with Mint adapter
+    * `:websocket` - Websocket transport using Fresh
     * `:custom` - Custom transport implementations
 
   Coming soon:
@@ -46,6 +47,10 @@ defmodule Exth.Transport do
     * `:headers` - Additional HTTP headers
     * `:timeout` - Request timeout in milliseconds (default: 30000)
     * `:adapter` - Tesla adapter to use (default: Tesla.Adapter.Mint)
+
+  Websocket-specific options:
+
+    * `:dispatch_callback` - Callback function to handle incoming messages
 
   ## Custom Transport Implementation
 
@@ -109,6 +114,7 @@ defmodule Exth.Transport do
   @typedoc """
   Supported transport types:
   * `:http` - HTTP/HTTPS transport
+  * `:websocket` - Websocket transport
   * `:custom` - Custom transport implementation
   """
   @type type :: :custom | :http | :websocket
@@ -125,7 +131,7 @@ defmodule Exth.Transport do
   Creates a new transport struct with the given type and options.
 
   ## Parameters
-    * `type` - The type of transport to create (`:http` or `:custom`)
+    * `type` - The type of transport to create (`:http`, `:websocket` or `:custom`)
     * `opts` - Configuration options for the transport
 
   ## Returns
@@ -148,18 +154,17 @@ defmodule Exth.Transport do
     opts[:rpc_url] || raise ArgumentError, "missing required option :rpc_url"
   end
 
-  defp get_transport_module(:http, _opts), do: __MODULE__.Http
-
   defp get_transport_module(:custom, opts) do
     opts[:module] || raise ArgumentError, "missing required option :module"
   end
 
-  defp get_transport_module(:websocket, opts) do
-    opts[:module] || raise ArgumentError, "missing required option :module"
-  end
-
-  defp get_transport_module(type, _opts) do
-    raise(ArgumentError, "invalid transport type: #{inspect(type)}")
+  defp get_transport_module(type, opts) do
+    case {type, opts[:module]} do
+      {:http, nil} -> __MODULE__.Http
+      {:websocket, nil} -> __MODULE__.Websocket
+      {_, module} when not is_nil(module) -> module
+      _ -> raise ArgumentError, "invalid transport type: #{inspect(type)}"
+    end
   end
 
   @type call_response :: Transportable.call_response()

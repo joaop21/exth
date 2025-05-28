@@ -51,7 +51,7 @@ defprotocol Exth.Transport.Transportable do
   def new(transport, opts)
 
   @type error_reason :: Exception.t() | String.t() | term()
-  @type call_response :: {:ok, String.t()} | {:error, error_reason()}
+  @type call_response :: :ok | {:ok, String.t()} | {:error, error_reason()}
 
   @doc """
   Makes a request using the configured transport.
