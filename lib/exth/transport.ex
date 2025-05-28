@@ -154,16 +154,17 @@ defmodule Exth.Transport do
     opts[:rpc_url] || raise ArgumentError, "missing required option :rpc_url"
   end
 
-  defp get_transport_module(:http, _opts), do: __MODULE__.Http
-
-  defp get_transport_module(:websocket, _opts), do: __MODULE__.Websocket
-
   defp get_transport_module(:custom, opts) do
     opts[:module] || raise ArgumentError, "missing required option :module"
   end
 
-  defp get_transport_module(type, _opts) do
-    raise(ArgumentError, "invalid transport type: #{inspect(type)}")
+  defp get_transport_module(type, opts) do
+    case {type, opts[:module]} do
+      {:http, nil} -> __MODULE__.Http
+      {:websocket, nil} -> __MODULE__.Websocket
+      {_, module} when not is_nil(module) -> module
+      _ -> raise ArgumentError, "invalid transport type: #{inspect(type)}"
+    end
   end
 
   @type call_response :: Transportable.call_response()
