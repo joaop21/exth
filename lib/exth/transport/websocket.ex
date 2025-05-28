@@ -96,7 +96,7 @@ defmodule Exth.Transport.Websocket do
     end
   end
 
-  @spec call(t(), String.t()) :: {:ok, String.t()} | {:error, term()}
+  @spec call(t(), String.t()) :: :ok
   def call(%__MODULE__{pid: pid}, encoded_request) do
     Fresh.send(pid, {:text, encoded_request})
   end
