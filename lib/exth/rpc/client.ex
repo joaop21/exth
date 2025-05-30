@@ -96,7 +96,7 @@ defmodule Exth.Rpc.Client do
   See `Exth.Transport` for transport details.
   """
   alias Exth.Rpc.Call
-  alias Exth.Rpc.InnerClient
+  alias Exth.Rpc.MessageHandler
   alias Exth.Rpc.Request
   alias Exth.Rpc.Response
   alias Exth.Rpc.Types
@@ -108,31 +108,32 @@ defmodule Exth.Rpc.Client do
   @type t :: %__MODULE__{
           counter: :atomics.atomics_ref(),
           transport: Transportable.t(),
-          inner_client: pid() | nil
+          handler: MessageHandler.handler() | nil
         }
 
-  defstruct [:counter, :transport, :inner_client]
+  defstruct [:counter, :transport, :handler]
 
   @spec new(Transport.type(), keyword()) :: t()
   def new(type, opts) when type in @transport_types do
+    validate_required_opts(opts)
+
     case type do
       :websocket ->
-        {:ok, inner_client} = InnerClient.new()
+        {:ok, handler} = MessageHandler.new(opts[:rpc_url])
 
         opts =
           Keyword.merge(opts,
             dispatch_callback: fn encoded_response ->
-              Process.send(inner_client, {:response, encoded_response}, [])
+              MessageHandler.handle_response(handler, encoded_response)
             end
           )
 
         transport = Transport.new(type, opts)
-        InnerClient.set_transport(inner_client, transport)
 
         %__MODULE__{
           counter: :atomics.new(1, signed: false),
           transport: transport,
-          inner_client: inner_client
+          handler: handler
         }
 
       _ ->
@@ -189,6 +190,12 @@ defmodule Exth.Rpc.Client do
   ### Private Functions
   ###
 
+  @doc false
+  defp validate_required_opts(opts) do
+    opts[:rpc_url] || raise ArgumentError, "missing required option :rpc_url"
+  end
+
+  @doc false
   defp do_send(%__MODULE__{} = client, %Request{} = request) do
     case do_send(client, [request]) do
       {:ok, [result]} -> {:ok, result}
@@ -198,7 +205,7 @@ defmodule Exth.Rpc.Client do
 
   defp do_send(%__MODULE__{}, []), do: {:ok, []}
 
-  defp do_send(%__MODULE__{inner_client: nil} = client, requests)
+  defp do_send(%__MODULE__{handler: nil} = client, requests)
        when is_list(requests) do
     with :ok <- validate_unique_ids(requests),
          requests <- assign_missing_ids(client, requests),
@@ -208,14 +215,15 @@ defmodule Exth.Rpc.Client do
     end
   end
 
-  defp do_send(%__MODULE__{inner_client: inner_client} = client, requests)
+  defp do_send(%__MODULE__{handler: handler} = client, requests)
        when is_list(requests) do
     with :ok <- validate_unique_ids(requests),
          requests <- assign_missing_ids(client, requests) do
-      InnerClient.call(inner_client, requests)
+      MessageHandler.call(handler, requests, client.transport)
     end
   end
 
+  @doc false
   defp validate_unique_ids(requests) when is_list(requests) do
     existing_ids = requests |> Enum.map(& &1.id) |> Enum.reject(&is_nil/1)
 
@@ -226,6 +234,7 @@ defmodule Exth.Rpc.Client do
     end
   end
 
+  @doc false
   defp assign_missing_ids(client, requests) when is_list(requests) do
     existing_ids = MapSet.new(requests, & &1.id)
 
@@ -238,6 +247,7 @@ defmodule Exth.Rpc.Client do
     end)
   end
 
+  @doc false
   defp generate_unique_id(client, existing_ids) do
     client
     |> generate_id()

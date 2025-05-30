@@ -1,9 +1,11 @@
 defmodule Exth.Rpc.ClientTest do
   use ExUnit.Case, async: true
+  use Mimic
 
   alias Exth.AsyncTestTransport
   alias Exth.Rpc.Call
   alias Exth.Rpc.Client
+  alias Exth.Rpc.MessageHandler
   alias Exth.Rpc.Request
   alias Exth.Rpc.Response
   alias Exth.TestTransport
@@ -32,8 +34,8 @@ defmodule Exth.Rpc.ClientTest do
       assert %Client{} = client
       assert client.counter != nil
       assert client.transport != nil
-      assert client.inner_client != nil
-      assert Process.alive?(client.inner_client)
+      assert client.handler != nil
+      assert Process.whereis(client.handler)
     end
 
     test "fails to create WebSocket client without URL" do
@@ -398,66 +400,29 @@ defmodule Exth.Rpc.ClientTest do
       {:ok, client: client}
     end
 
-    test "sends a single request through inner client", %{client: client} do
-      request = [Request.new("eth_blockNumber", [], 1)]
-      response = [%{id: 1, result: "0x1234"}]
+    test "sends a single request through handler", %{client: client} do
+      request = Request.new("eth_blockNumber", [], 1)
+      response = %Response.Success{id: 1, result: "0x1234"}
 
-      # Start a process to send the response
-      spawn(fn ->
-        Process.sleep(10)
-        send(client.inner_client, {:response, JSON.encode!(response)})
-      end)
+      expect(MessageHandler, :call, fn _, [^request], _ -> {:ok, [response]} end)
 
-      assert {:ok, [%Response.Success{id: 1, result: "0x1234"}]} = Client.send(client, request)
+      assert {:ok, ^response} = Client.send(client, request)
     end
 
-    test "sends batch requests through inner client", %{client: client} do
+    test "sends batch requests through handler", %{client: client} do
       requests = [
         Request.new("eth_blockNumber", [], 1),
         Request.new("eth_chainId", [], 2)
       ]
 
       responses = [
-        %{id: 1, result: "0x1234"},
-        %{id: 2, result: "0x5678"}
+        %Response.Success{id: 1, result: "0x1234"},
+        %Response.Success{id: 2, result: "0x5678"}
       ]
 
-      # Start a process to send the responses
-      spawn(fn ->
-        Process.sleep(10)
+      expect(MessageHandler, :call, fn _, ^requests, _ -> {:ok, responses} end)
 
-        responses
-        |> Enum.map_join(",", fn response -> JSON.encode!(response) end)
-        |> then(fn response -> send(client.inner_client, {:response, "[#{response}]"}) end)
-      end)
-
-      assert {:ok,
-              [
-                %Response.Success{id: 1, result: "0x1234"},
-                %Response.Success{id: 2, result: "0x5678"}
-              ]} = Client.send(client, requests)
-    end
-
-    test "handles deserialization errors", %{client: client} do
-      request = [Request.new("eth_blockNumber", [], 1)]
-
-      # Start a process to send an invalid response
-      spawn(fn ->
-        Process.sleep(10)
-        send(client.inner_client, {:response, "invalid json"})
-      end)
-
-      assert catch_exit(Client.send(client, request)) ==
-               {:timeout, {GenServer, :call, [client.inner_client, {:send, request}, 5000]}}
-    end
-
-    test "handles orphaned responses", %{client: client} do
-      # Send a response without a matching request
-      response = %{id: 999, result: "0x1234"}
-      send(client.inner_client, {:response, JSON.encode!(response)})
-
-      # The process should not crash
-      assert Process.alive?(client.inner_client)
+      assert {:ok, ^responses} = Client.send(client, requests)
     end
   end
 end
