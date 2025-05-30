@@ -46,7 +46,7 @@ defmodule Exth.Rpc.MessageHandlerTest do
 
       # Start a process to send the response
       spawn(fn ->
-        Process.sleep(1000)
+        Process.sleep(10)
         MessageHandler.handle_response(handler, JSON.encode!(%{id: 1, result: "0x1234"}))
       end)
 

@@ -96,10 +96,9 @@ defmodule Exth.Rpc.Client do
   See `Exth.Transport` for transport details.
   """
   alias Exth.Rpc.Call
-  alias Exth.Rpc.InnerClient
+  alias Exth.Rpc.MessageHandler
   alias Exth.Rpc.Request
   alias Exth.Rpc.Response
-  alias Exth.Rpc.MessageHandler
   alias Exth.Rpc.Types
   alias Exth.Transport
   alias Exth.Transport.Transportable
@@ -116,9 +115,11 @@ defmodule Exth.Rpc.Client do
 
   @spec new(Transport.type(), keyword()) :: t()
   def new(type, opts) when type in @transport_types do
+    validate_required_opts(opts)
+
     case type do
       :websocket ->
-        {:ok, handler} = MessageHandler.new()
+        {:ok, handler} = MessageHandler.new(opts[:rpc_url])
 
         opts =
           Keyword.merge(opts,
@@ -189,6 +190,12 @@ defmodule Exth.Rpc.Client do
   ### Private Functions
   ###
 
+  @doc false
+  defp validate_required_opts(opts) do
+    opts[:rpc_url] || raise ArgumentError, "missing required option :rpc_url"
+  end
+
+  @doc false
   defp do_send(%__MODULE__{} = client, %Request{} = request) do
     case do_send(client, [request]) do
       {:ok, [result]} -> {:ok, result}
@@ -216,6 +223,7 @@ defmodule Exth.Rpc.Client do
     end
   end
 
+  @doc false
   defp validate_unique_ids(requests) when is_list(requests) do
     existing_ids = requests |> Enum.map(& &1.id) |> Enum.reject(&is_nil/1)
 
@@ -226,6 +234,7 @@ defmodule Exth.Rpc.Client do
     end
   end
 
+  @doc false
   defp assign_missing_ids(client, requests) when is_list(requests) do
     existing_ids = MapSet.new(requests, & &1.id)
 
@@ -238,6 +247,7 @@ defmodule Exth.Rpc.Client do
     end)
   end
 
+  @doc false
   defp generate_unique_id(client, existing_ids) do
     client
     |> generate_id()
