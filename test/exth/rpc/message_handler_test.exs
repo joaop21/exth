@@ -8,35 +8,52 @@ defmodule Exth.Rpc.MessageHandlerTest do
   alias Exth.Rpc.Response
   alias Exth.Transport
 
-  @rpc_url "wss://eth-mainnet.example.com"
+  @base_url "wss://eth-mainnet.example.com"
   @call_timeout 5_000
 
   setup :verify_on_exit!
 
   describe "new/1" do
-    test "creates a new handler with a unique name" do
-      assert {:ok, handler} = MessageHandler.new(@rpc_url)
+    setup %{test: test_name} do
+      rpc_url = "#{@base_url}/#{test_name}"
+      {:ok, handler} = MessageHandler.new(rpc_url)
+
+      on_exit(:kill_handler, fn ->
+        if pid = Process.whereis(handler) do
+          Process.exit(pid, :normal)
+        end
+      end)
+
+      %{handler: handler, rpc_url: rpc_url}
+    end
+
+    test "creates a new handler with a unique name", %{handler: handler} do
       assert is_atom(handler)
     end
 
-    test "creates different handlers for different URLs" do
-      {:ok, handler1} = MessageHandler.new(@rpc_url)
-      {:ok, handler2} = MessageHandler.new("wss://eth-goerli.example.com")
-      assert handler1 != handler2
+    test "creates different handlers for different URLs", %{handler: handler} do
+      {:ok, another_handler} = MessageHandler.new("wss://eth-goerli.example.com")
+      assert handler != another_handler
     end
 
-    test "returns error when creating handler with duplicate URL" do
-      {:ok, _handler1} = MessageHandler.new(@rpc_url)
-      assert {:error, {:already_started, _pid}} = MessageHandler.new(@rpc_url)
+    test "returns error when creating handler with duplicate URL", %{rpc_url: rpc_url} do
+      assert {:error, {:already_started, _pid}} = MessageHandler.new(rpc_url)
     end
   end
 
   describe "call/4" do
-    setup do
-      {:ok, handler} = MessageHandler.new(@rpc_url)
+    setup %{test: test_name} do
+      rpc_url = "#{@base_url}/#{test_name}"
+      {:ok, handler} = MessageHandler.new(rpc_url)
 
       transport =
-        Transport.new(:websocket, rpc_url: @rpc_url, module: AsyncTestTransport)
+        Transport.new(:websocket, rpc_url: rpc_url, module: AsyncTestTransport)
+
+      on_exit(:kill_handler, fn ->
+        if pid = Process.whereis(handler) do
+          Process.exit(pid, :normal)
+        end
+      end)
 
       {:ok, handler: handler, transport: transport}
     end
@@ -102,8 +119,16 @@ defmodule Exth.Rpc.MessageHandlerTest do
   end
 
   describe "handle_response/2" do
-    setup do
-      {:ok, handler} = MessageHandler.new(@rpc_url)
+    setup %{test: test_name} do
+      rpc_url = "#{@base_url}/#{test_name}"
+      {:ok, handler} = MessageHandler.new(rpc_url)
+
+      on_exit(:kill_handler, fn ->
+        if pid = Process.whereis(handler) do
+          Process.exit(pid, :normal)
+        end
+      end)
+
       {:ok, handler: handler}
     end
 
