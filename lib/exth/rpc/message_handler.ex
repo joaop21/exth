@@ -167,7 +167,7 @@ defmodule Exth.Rpc.MessageHandler do
   # Private functions
 
   @doc false
-  defp get_correlation_id(%{id: id}), do: id
+  defp get_correlation_id(%{id: id}), do: to_string(id)
   defp get_correlation_id(requests), do: Enum.map_join(requests, "_", &get_correlation_id/1)
 
   @doc false
