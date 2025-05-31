@@ -102,6 +102,13 @@ defmodule Exth.Rpc.ResponseTest do
       actual_fields = MapSet.new(Map.keys(error))
       assert expected_fields == actual_fields
     end
+
+    test "SubscriptionEvent struct has correct fields" do
+      event = %Response.SubscriptionEvent{}
+      expected_fields = MapSet.new([:__struct__, :method, :params, :jsonrpc])
+      actual_fields = MapSet.new(Map.keys(event))
+      assert expected_fields == actual_fields
+    end
   end
 
   describe "deserialize/1" do
@@ -297,6 +304,102 @@ defmodule Exth.Rpc.ResponseTest do
     test "handles invalid JSON" do
       json = "invalid json"
       assert {:error, {:invalid_byte, _, _}} = Response.deserialize(json)
+    end
+
+    test "decodes subscription events" do
+      test_cases = [
+        {
+          %{
+            "jsonrpc" => "2.0",
+            "method" => "eth_subscription",
+            "params" => %{
+              "subscription" => "0x1234",
+              "result" => %{"block" => "0x5678"}
+            }
+          },
+          "block event"
+        },
+        {
+          %{
+            "jsonrpc" => "2.0",
+            "method" => "eth_subscription",
+            "params" => %{
+              "subscription" => "0xabcd",
+              "result" => %{"logs" => [%{"address" => "0x1234"}]}
+            }
+          },
+          "logs event"
+        },
+        {
+          %{
+            "jsonrpc" => "2.0",
+            "method" => "eth_subscription",
+            "params" => %{
+              "subscription" => "0xefgh",
+              "result" => "0x1234"
+            }
+          },
+          "simple result"
+        }
+      ]
+
+      for {event, description} <- test_cases do
+        json = JSON.encode!(event)
+        assert {:ok, response} = Response.deserialize(json), "Failed to decode #{description}"
+        assert %Response.SubscriptionEvent{} = response
+        assert response.method == "eth_subscription"
+        assert response.params.subscription == event["params"]["subscription"]
+        assert response.params.result == event["params"]["result"]
+        assert response.jsonrpc == "2.0"
+      end
+    end
+
+    test "handles invalid subscription events" do
+      invalid_events = [
+        # missing method
+        %{
+          "jsonrpc" => "2.0",
+          "params" => %{
+            "subscription" => "0x1234",
+            "result" => %{"block" => "0x5678"}
+          }
+        },
+        # missing params
+        %{
+          "jsonrpc" => "2.0",
+          "method" => "eth_subscription"
+        },
+        # missing subscription ID
+        %{
+          "jsonrpc" => "2.0",
+          "method" => "eth_subscription",
+          "params" => %{
+            "result" => %{"block" => "0x5678"}
+          }
+        },
+        # missing result
+        %{
+          "jsonrpc" => "2.0",
+          "method" => "eth_subscription",
+          "params" => %{
+            "subscription" => "0x1234"
+          }
+        },
+        # wrong method
+        %{
+          "jsonrpc" => "2.0",
+          "method" => "wrong_method",
+          "params" => %{
+            "subscription" => "0x1234",
+            "result" => %{"block" => "0x5678"}
+          }
+        }
+      ]
+
+      for event <- invalid_events do
+        json = JSON.encode!(event)
+        assert {:error, _reason} = Response.deserialize(json)
+      end
     end
   end
 end
