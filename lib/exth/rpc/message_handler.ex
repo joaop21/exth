@@ -14,6 +14,7 @@ defmodule Exth.Rpc.MessageHandler do
     * Process crash resilience
     * Efficient message routing
     * Support for any transport implementation
+    * Subscription handling
 
   ## Usage
 
@@ -30,6 +31,7 @@ defmodule Exth.Rpc.MessageHandler do
 
   1. Client creates its own handler instance with a unique name
   2. Client sends a request through `call/4`:
+     * Determines request type (RPC vs Subscription)
      * Registers request ID with caller's PID
      * Sends request through transport
      * Waits for response
@@ -69,7 +71,10 @@ defmodule Exth.Rpc.MessageHandler do
 
   @type request_id :: pos_integer() | String.t()
   @type handler :: Registry.registry()
+  @type request_type :: :rpc | :subscription
   @call_timeout 5_000
+
+  @subscription_methods ["eth_subscribe", "eth_unsubscribe"]
 
   @doc """
   Creates a new handler instance for a client.
@@ -101,10 +106,11 @@ defmodule Exth.Rpc.MessageHandler do
   Sends a request through the handler and waits for a response.
 
   This function handles the full request/response cycle:
-  1. Registers the request ID with the caller's PID
-  2. Sends the request through the transport
-  3. Waits for the response
-  4. Cleans up the registration
+  1. Determines request type (RPC vs Subscription)
+  2. Registers the request ID with the caller's PID
+  3. Sends the request through the transport
+  4. Waits for the response
+  5. Cleans up the registration
 
   ## Parameters
     * `handler` - The handler instance to use
@@ -122,14 +128,10 @@ defmodule Exth.Rpc.MessageHandler do
   @spec call(handler(), [Request.t()], Transport.Transportable.t(), timeout()) ::
           {:ok, [Response.t()]} | {:error, term()}
   def call(handler, requests, transport, timeout \\ @call_timeout) do
-    correlation_id = get_correlation_id(requests)
-    ref = make_ref()
-
-    with {:ok, _owner} <- Registry.register(handler, correlation_id, ref),
-         :ok <- send_request(requests, transport),
-         {:ok, response} <- wait_for_response(ref, timeout),
-         :ok <- Registry.unregister(handler, correlation_id) do
-      {:ok, response}
+    case get_request_type(requests) do
+      {:ok, :subscription} -> handle_subscription(handler, requests, transport, timeout)
+      {:ok, :rpc} -> handle_rpc(handler, requests, transport, timeout)
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -140,6 +142,11 @@ defmodule Exth.Rpc.MessageHandler do
   1. Deserializes the response
   2. Looks up the registered caller
   3. Sends the response to the caller
+
+  For subscription events, it:
+  1. Extracts the subscription ID from the notification
+  2. Looks up the process that owns the subscription
+  3. Delivers the event to that process
 
   ## Parameters
     * `handler` - The handler instance to use
@@ -154,13 +161,28 @@ defmodule Exth.Rpc.MessageHandler do
   """
   @spec handle_response(handler(), String.t()) :: :ok | :error
   def handle_response(handler, encoded_response) do
-    with {:ok, response} <- Response.deserialize(encoded_response),
-         correlation_id = get_correlation_id(response),
-         [{pid, ref}] <- Registry.lookup(handler, correlation_id) do
-      send(pid, {ref, response})
-      :ok
-    else
-      _ -> :error
+    case Response.deserialize(encoded_response) do
+      # Subscription events
+      {:ok, %Response.SubscriptionEvent{} = response} ->
+        handler
+        |> Registry.lookup(response.params.subscription)
+        |> Enum.each(fn {pid, _value} -> send(pid, response) end)
+
+      # RPC responses
+      {:ok, response} ->
+        correlation_id = get_correlation_id(response)
+
+        case Registry.lookup(handler, correlation_id) do
+          [{pid, ref}] ->
+            send(pid, {ref, response})
+            :ok
+
+          [] ->
+            :error
+        end
+
+      _ ->
+        :error
     end
   end
 
@@ -169,6 +191,69 @@ defmodule Exth.Rpc.MessageHandler do
   @doc false
   defp get_correlation_id(%{id: id}), do: to_string(id)
   defp get_correlation_id(requests), do: Enum.map_join(requests, "_", &get_correlation_id/1)
+
+  @doc false
+  defp get_request_type(%Request{method: method}) when method in @subscription_methods do
+    {:ok, :subscription}
+  end
+
+  defp get_request_type(%Request{}), do: {:ok, :rpc}
+
+  defp get_request_type(requests) when is_list(requests) do
+    case requests do
+      [request] when request.method in @subscription_methods ->
+        {:ok, :subscription}
+
+      [_request] ->
+        {:ok, :rpc}
+
+      requests when length(requests) > 1 ->
+        if Enum.any?(requests, &(&1.method in @subscription_methods)) do
+          {:error, :subscription_batch_not_supported}
+        else
+          {:ok, :rpc}
+        end
+
+      _ ->
+        {:error, :invalid_request}
+    end
+  end
+
+  @doc false
+  defp handle_subscription(handler, [request], transport, timeout) do
+    with {:ok, response} <- handle_request(handler, request, transport, timeout) do
+      if valid_subscription_response?(response) do
+        {:ok, _owner} = Registry.register(handler, response.result, self())
+      end
+
+      {:ok, [response]}
+    end
+  end
+
+  @doc false
+  defp valid_subscription_response?(%Response.Success{result: subscription_id})
+       when is_binary(subscription_id),
+       do: true
+
+  defp valid_subscription_response?(_response), do: false
+
+  @doc false
+  defp handle_rpc(handler, requests, transport, timeout) do
+    handle_request(handler, requests, transport, timeout)
+  end
+
+  @doc false
+  defp handle_request(handler, requests, transport, timeout) do
+    correlation_id = get_correlation_id(requests)
+    ref = make_ref()
+
+    with {:ok, _owner} <- Registry.register(handler, correlation_id, ref),
+         :ok <- send_request(requests, transport),
+         {:ok, response} <- wait_for_response(ref, timeout),
+         :ok <- Registry.unregister(handler, correlation_id) do
+      {:ok, response}
+    end
+  end
 
   @doc false
   defp send_request(requests, transport) do
