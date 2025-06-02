@@ -133,7 +133,7 @@ defmodule Exth.Rpc.MessageHandlerTest do
     end
 
     test "routes response to registered caller", %{handler: handler} do
-      {:ok, _} = Registry.register(handler, 1, self())
+      {:ok, _} = Registry.register(handler, "1", self())
 
       assert :ok =
                MessageHandler.handle_response(handler, JSON.encode!(%{id: 1, result: "0x1234"}))
@@ -156,12 +156,133 @@ defmodule Exth.Rpc.MessageHandlerTest do
         error: %{code: -32_601, message: "Method not found"}
       }
 
-      {:ok, _} = Registry.register(handler, 1, self())
+      {:ok, _} = Registry.register(handler, "1", self())
 
       assert :ok = MessageHandler.handle_response(handler, JSON.encode!(response))
 
       assert_receive {_ref,
                       %Response.Error{id: 1, error: %{code: -32_601, message: "Method not found"}}}
+    end
+  end
+
+  describe "subscriptions" do
+    setup %{test: test_name} do
+      rpc_url = "#{@base_url}/#{test_name}"
+      {:ok, handler} = MessageHandler.new(rpc_url)
+
+      transport =
+        Transport.new(:websocket, rpc_url: rpc_url, module: AsyncTestTransport)
+
+      on_exit(:kill_handler, fn ->
+        if pid = Process.whereis(handler) do
+          Process.exit(pid, :normal)
+        end
+      end)
+
+      {:ok, handler: handler, transport: transport}
+    end
+
+    test "creates a subscription", %{handler: handler, transport: transport} do
+      request = Request.new("eth_subscribe", ["newHeads"], 1)
+
+      # Start a process to send the response
+      spawn(fn ->
+        Process.sleep(10)
+        MessageHandler.handle_response(handler, JSON.encode!(%{id: 1, result: "0x1234"}))
+      end)
+
+      assert {:ok, [%Response.Success{} = response]} =
+               MessageHandler.call(handler, [request], transport, @call_timeout)
+
+      assert response.id == 1
+      assert response.result == "0x1234"
+    end
+
+    test "handles subscription events", %{handler: handler} do
+      # Register a subscription
+      {:ok, _} = Registry.register(handler, "0x1234", self())
+
+      # Send a subscription event
+      event = %{
+        "jsonrpc" => "2.0",
+        "method" => "eth_subscription",
+        "params" => %{
+          "subscription" => "0x1234",
+          "result" => %{"number" => "0x5678"}
+        }
+      }
+
+      assert :ok = MessageHandler.handle_response(handler, JSON.encode!(event))
+
+      assert_receive %Response.SubscriptionEvent{
+        method: "eth_subscription",
+        params: %{
+          subscription: "0x1234",
+          result: %{"number" => "0x5678"}
+        }
+      }
+    end
+
+    test "handles invalid subscription events", %{handler: handler} do
+      invalid_events = [
+        # Missing method
+        %{
+          "jsonrpc" => "2.0",
+          "params" => %{
+            "subscription" => "0x1234",
+            "result" => %{"number" => "0x5678"}
+          }
+        },
+        # Missing params
+        %{
+          "jsonrpc" => "2.0",
+          "method" => "eth_subscription"
+        },
+        # Missing subscription ID
+        %{
+          "jsonrpc" => "2.0",
+          "method" => "eth_subscription",
+          "params" => %{
+            "result" => %{"number" => "0x5678"}
+          }
+        },
+        # Wrong method
+        %{
+          "jsonrpc" => "2.0",
+          "method" => "wrong_method",
+          "params" => %{
+            "subscription" => "0x1234",
+            "result" => %{"number" => "0x5678"}
+          }
+        }
+      ]
+
+      for event <- invalid_events do
+        assert :error = MessageHandler.handle_response(handler, JSON.encode!(event))
+      end
+    end
+
+    test "handles orphaned subscription events", %{handler: handler} do
+      event = %{
+        "jsonrpc" => "2.0",
+        "method" => "eth_subscription",
+        "params" => %{
+          "subscription" => "0x1234",
+          "result" => %{"number" => "0x5678"}
+        }
+      }
+
+      assert :ok = MessageHandler.handle_response(handler, JSON.encode!(event))
+    end
+
+    test "rejects batch subscription requests", %{handler: handler, transport: transport} do
+      requests = [
+        Request.new("eth_subscribe", ["newHeads"], 1),
+        Request.new("eth_subscribe", ["logs"], 2)
+      ]
+
+      assert {:error, :subscription_batch_not_supported} =
+               MessageHandler.call(handler, requests, transport, @call_timeout)
     end
   end
 end
