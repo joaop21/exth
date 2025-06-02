@@ -39,13 +39,17 @@ defmodule Examples do
       |> Rpc.request("eth_subscribe", ["newHeads"])
       |> Rpc.send()
 
+    Logger.info("Subscribed to new blocks: #{response.result}")
+
     receive_loop(response.result)
   end
 
   defp receive_loop(subscription_id) do
     receive do
-      %SubscriptionEvent{params: %{"subscription" => ^subscription_id}} ->
+      %SubscriptionEvent{params: %{subscription: ^subscription_id, result: result}} ->
         Logger.info("New block received")
+        Logger.info("Parent Block Hash: #{result["parentHash"]}")
+        Logger.info("Block Hash: #{result["hash"]}")
 
       event ->
         Logger.info("Unknown event received: #{inspect(event)}")
