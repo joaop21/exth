@@ -113,7 +113,46 @@ defmodule Exth.Rpc.Response do
     ]
   end
 
-  @type t :: Success.t() | Error.t()
+  defmodule SubscriptionEvent do
+    @moduledoc """
+    Represents a JSON-RPC 2.0 subscription event.
+
+    ## Fields
+
+      * `method` - The event method (e.g., "eth_subscription")
+      * `params` - A map containing event details:
+        * `subscription` - The subscription ID
+        * `result` - The actual event data
+      * `jsonrpc` - JSON-RPC version (defaults to "2.0")
+
+    ## Example
+
+        %SubscriptionEvent{
+          method: "eth_subscription",
+          params: %{
+            subscription: "0x1234",
+            result: %{...}
+          },
+          jsonrpc: "2.0"
+        }
+    """
+
+    @type t :: %__MODULE__{
+            method: String.t(),
+            params: %{
+              subscription: String.t(),
+              result: any()
+            },
+            jsonrpc: Types.jsonrpc()
+          }
+    defstruct [
+      :method,
+      :params,
+      jsonrpc: Types.jsonrpc_version()
+    ]
+  end
+
+  @type t :: Success.t() | Error.t() | SubscriptionEvent.t()
 
   @spec success(Types.id(), String.t()) :: Success.t()
   def success(id, result) when not is_nil(id), do: %Success{id: id, result: result}
@@ -133,12 +172,29 @@ defmodule Exth.Rpc.Response do
 
       iex> Exth.Rpc.Response.deserialize(~s({"jsonrpc": "2.0", "error": {"code": -32_601, "message": "Method not found"}, "id": 1}))
       {:ok, %Exth.Rpc.Response.Error{id: 1, error: %{code: -32_601, message: "Method not found"}}}
+
+      iex> Exth.Rpc.Response.deserialize(~s({"jsonrpc": "2.0", "method": "eth_subscription", "params": {"subscription": "0x1234", "result": {"block": "0x123"}}}))
+      {:ok, %Exth.Rpc.Response.SubscriptionEvent{
+        method: "eth_subscription",
+        params: %{subscription: "0x1234", result: %{"block" => "0x123"}}
+      }}
   """
   @spec deserialize(String.t()) :: {:ok, t() | [t()]} | {:error, term()}
   def deserialize(json) when is_binary(json) do
     with {:ok, response} <- JSON.decode(json) do
       do_decode_response(response)
     end
+  end
+
+  defp do_decode_response(%{
+         "method" => "eth_subscription",
+         "params" => %{"subscription" => subscription, "result" => result}
+       }) do
+    {:ok,
+     %SubscriptionEvent{
+       method: "eth_subscription",
+       params: %{subscription: subscription, result: result}
+     }}
   end
 
   defp do_decode_response(%{"id" => id, "result" => result}),
