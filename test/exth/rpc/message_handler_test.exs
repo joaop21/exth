@@ -284,5 +284,73 @@ defmodule Exth.Rpc.MessageHandlerTest do
       assert {:error, :subscription_batch_not_supported} =
                MessageHandler.call(handler, requests, transport, @call_timeout)
     end
+
+    test "unsubscribes from a subscription", %{handler: handler, transport: transport} do
+      subscription_id = "0x1234"
+
+      # First subscribe
+      {:ok, _} = Registry.register(handler, subscription_id, self())
+
+      # Then unsubscribe
+      unsubscribe_request = Request.new("eth_unsubscribe", [subscription_id], 2)
+
+      # Start a process to send the response
+      spawn(fn ->
+        Process.sleep(100)
+        MessageHandler.handle_response(handler, JSON.encode!(%{id: 2, result: true}))
+      end)
+
+      assert {:ok, [%Response.Success{} = response]} =
+               MessageHandler.call(handler, [unsubscribe_request], transport, @call_timeout)
+
+      assert response.id == 2
+      assert response.result == true
+
+      # Verify the subscription is unregistered
+      assert [] = Registry.lookup(handler, subscription_id)
+    end
+
+    test "handles failed unsubscribe", %{handler: handler, transport: transport} do
+      # First subscribe
+      # subscribe_request = Request.new("eth_subscribe", ["newHeads"], 1)
+      {:ok, _} = Registry.register(handler, "0x1234", self())
+
+      # Try to unsubscribe with wrong ID
+      unsubscribe_request = Request.new("eth_unsubscribe", ["wrong_id"], 2)
+
+      # Start a process to send the response
+      spawn(fn ->
+        Process.sleep(10)
+        MessageHandler.handle_response(handler, JSON.encode!(%{id: 2, result: false}))
+      end)
+
+      assert {:ok, [%Response.Success{} = response]} =
+               MessageHandler.call(handler, [unsubscribe_request], transport, @call_timeout)
+
+      assert response.id == 2
+      assert response.result == false
+
+      # Verify the original subscription is still registered
+      assert [{_pid, _value}] = Registry.lookup(handler, "0x1234")
+    end
+
+    test "handles unsubscribe for non-existent subscription", %{
+      handler: handler,
+      transport: transport
+    } do
+      unsubscribe_request = Request.new("eth_unsubscribe", ["0x1234"], 1)
+
+      # Start a process to send the response
+      spawn(fn ->
+        Process.sleep(10)
+        MessageHandler.handle_response(handler, JSON.encode!(%{id: 1, result: false}))
+      end)
+
+      assert {:ok, [%Response.Success{} = response]} =
+               MessageHandler.call(handler, [unsubscribe_request], transport, @call_timeout)
+
+      assert response.id == 1
+      assert response.result == false
+    end
   end
 end
