@@ -222,20 +222,22 @@ defmodule Exth.Rpc.MessageHandler do
   @doc false
   defp handle_subscription(handler, [request], transport, timeout) do
     with {:ok, response} <- handle_request(handler, request, transport, timeout) do
-      if valid_subscription_response?(response) do
-        {:ok, _owner} = Registry.register(handler, response.result, self())
-      end
+      case {request.method, response} do
+        {"eth_subscribe", %Response.Success{result: subscription_id}}
+        when is_binary(subscription_id) ->
+          {:ok, _owner} = Registry.register(handler, subscription_id, self())
+          {:ok, [response]}
 
-      {:ok, [response]}
+        {"eth_unsubscribe", %Response.Success{result: true}} ->
+          # Clean up the subscription registration
+          :ok = Registry.unregister(handler, hd(request.params))
+          {:ok, [response]}
+
+        _ ->
+          {:ok, [response]}
+      end
     end
   end
-
-  @doc false
-  defp valid_subscription_response?(%Response.Success{result: subscription_id})
-       when is_binary(subscription_id),
-       do: true
-
-  defp valid_subscription_response?(_response), do: false
 
   @doc false
   defp handle_rpc(handler, requests, transport, timeout) do
