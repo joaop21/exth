@@ -21,7 +21,7 @@ mix deps.get
 
 ## Running Examples
 
-There are two main ways to run the examples:
+There are three main ways to run the examples:
 
 ### 1. Using Provider API
 
@@ -43,13 +43,26 @@ For more direct control over RPC calls:
 iex> Examples.run_with_clients()
 ```
 
+### 3. Using WebSocket Subscriptions
+
+For real-time updates and subscriptions:
+
+```elixir
+iex> Examples.subscribe_to_new_blocks()
+```
+
 ## Configuration
 
-The app demonstrates two different ways to configure providers:
+The app demonstrates three different ways to configure providers:
 
 1. **Runtime Configuration** (Ethereum Provider):
 
    - Configuration is loaded at runtime from `config/runtime.exs`
 
 2. **Inline Configuration** (Polygon Provider):
+
+   - Configuration is specified directly in the provider module
+
+3. **WebSocket Subscriptions** (WsEthereum Provider):
+
    - Configuration is specified directly in the provider module
