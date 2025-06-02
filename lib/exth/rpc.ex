@@ -9,9 +9,10 @@ defmodule Exth.Rpc do
 
     * Client-based and standalone request building
     * Batch request support for better performance
-    * Configurable transport layers (HTTP, custom implementations)
+    * Configurable transport layers (HTTP, WebSocket, custom implementations)
     * Automatic request ID generation and version management
     * Comprehensive error handling
+    * Support for WebSocket subscriptions
 
   ## Quick Start
 
@@ -21,6 +22,11 @@ defmodule Exth.Rpc do
       # Make a simple request
       request = Rpc.raw_request("eth_blockNumber", [])
       {:ok, response} = Rpc.send(client, request)
+
+      # Create a WebSocket client for subscriptions
+      ws_client = Rpc.new_client(:websocket, rpc_url: "wss://eth-mainnet.example.com")
+      request = Rpc.raw_request("eth_subscribe", ["newHeads"])
+      {:ok, response} = Rpc.send(ws_client, request)
 
   ## Request Patterns
 
@@ -46,11 +52,24 @@ defmodule Exth.Rpc do
       ]
       {:ok, [block_response, gas_response]} = Rpc.send(client, requests)
 
+  ### WebSocket Subscriptions
+      # Create a WebSocket client
+      ws_client = Rpc.new_client(:websocket, rpc_url: "wss://eth-mainnet.example.com")
+
+      # Subscribe to new blocks
+      request = Rpc.raw_request("eth_subscribe", ["newHeads"])
+      {:ok, response} = Rpc.send(ws_client, request)
+
+      # Unsubscribe when done
+      unsubscribe_request = Rpc.raw_request("eth_unsubscribe", [response.result])
+      {:ok, _} = Rpc.send(ws_client, unsubscribe_request)
+
   ## Transport Configuration
 
   The module supports different transport layers:
 
     * `:http` - Standard HTTP/HTTPS transport with configurable headers and timeouts
+    * `:websocket` - WebSocket transport for real-time updates and subscriptions
     * `:custom` - Custom transport implementations for special needs
 
   ## Error Handling
@@ -79,6 +98,7 @@ defmodule Exth.Rpc do
     * Handle errors gracefully
     * Monitor client health
     * Clean up resources when done
+    * Use WebSocket transport for subscriptions and real-time updates
 
   See the individual function documentation for more detailed usage examples
   and options.
@@ -95,6 +115,7 @@ defmodule Exth.Rpc do
 
   ## Transport Types
     * `:http` - HTTP/HTTPS transport
+    * `:websocket` - WebSocket transport
     * `:custom` - Custom transport implementation
 
   ## Options
@@ -106,6 +127,9 @@ defmodule Exth.Rpc do
 
       # Create an HTTP client
       client = Rpc.new_client(:http, rpc_url: "https://eth-mainnet.example.com")
+
+      # Create a WebSocket client
+      ws_client = Rpc.new_client(:websocket, rpc_url: "wss://eth-mainnet.example.com")
 
       # Create a custom transport client
       client = Rpc.new_client(:custom, module: MyTransport, rpc_url: "https://example.com")
