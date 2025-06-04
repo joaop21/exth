@@ -25,7 +25,7 @@ defmodule Exth.Transport.Http do
 
   @adapter Tesla.Adapter.Mint
   @default_timeout 30_000
-  @user_agent "#{Application.spec(:exth, :description)}/#{Application.spec(:exth, :vsn)}"
+  @user_agent "#{Application.spec(:exth, :name)}/#{Application.spec(:exth, :vsn)}"
 
   @doc """
   Makes an HTTP request to the JSON-RPC endpoint.
