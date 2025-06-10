@@ -65,7 +65,7 @@ defmodule Exth.Rpc.Request do
     end
 
     %__MODULE__{
-      method: method,
+      method: to_string(method),
       params: params,
       id: id
     }

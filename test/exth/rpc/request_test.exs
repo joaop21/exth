@@ -45,9 +45,9 @@ defmodule Exth.Rpc.RequestTest do
       assert request.id == id
     end
 
-    test "accepts atom as method" do
+    test "accepts atom as method but transforms to string" do
       request = Request.new(:eth_getBalance, [], 1)
-      assert request.method == :eth_getBalance
+      assert request.method == "eth_getBalance"
     end
 
     test "raises when method is invalid" do
