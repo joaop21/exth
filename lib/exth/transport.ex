@@ -9,6 +9,7 @@ defmodule Exth.Transport do
 
     * Pluggable transport system via the `Transportable` protocol
     * Built-in HTTP transport with Tesla/Mint
+    * Built-in WebSocket transport with Fresh
     * Consistent interface across transport types
     * Configurable timeout and retry mechanisms
     * Transport-specific option handling
@@ -17,7 +18,7 @@ defmodule Exth.Transport do
 
   Currently supported:
     * `:http` - HTTP/HTTPS transport using Tesla with Mint adapter
-    * `:websocket` - Websocket transport using Fresh
+    * `:websocket` - WebSocket transport using Fresh
     * `:custom` - Custom transport implementations
 
   Coming soon:
@@ -31,6 +32,12 @@ defmodule Exth.Transport do
         rpc_url: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID",
         timeout: 30_000,
         headers: [{"authorization", "Bearer token"}]
+      )
+
+      # Create a WebSocket transport
+      transport = Transport.new(:websocket,
+        rpc_url: "wss://mainnet.infura.io/ws/v3/YOUR-PROJECT-ID",
+        dispatch_callback: fn response -> handle_response(response) end
       )
 
       # Make requests
@@ -48,9 +55,10 @@ defmodule Exth.Transport do
     * `:timeout` - Request timeout in milliseconds (default: 30000)
     * `:adapter` - Tesla adapter to use (default: Tesla.Adapter.Mint)
 
-  Websocket-specific options:
+  WebSocket-specific options:
 
     * `:dispatch_callback` - Callback function to handle incoming messages
+    * `:module` - Optional custom WebSocket implementation
 
   ## Custom Transport Implementation
 
@@ -96,6 +104,11 @@ defmodule Exth.Transport do
     * `{:error, :timeout}` - Request timeout
     * `{:error, :network_error}` - Network connectivity issues
 
+  WebSocket-specific errors:
+    * `{:error, :connection_failed}` - Failed to establish WebSocket connection
+    * `{:error, :invalid_url}` - Invalid WebSocket URL format
+    * `{:error, :missing_callback}` - Missing dispatch callback
+
   ## Best Practices
 
     * Use appropriate timeouts for your use case
@@ -104,6 +117,8 @@ defmodule Exth.Transport do
     * Monitor transport health and metrics
     * Properly handle connection pooling
     * Use secure transport options in production
+    * Use WebSocket transport for subscriptions and real-time updates
+    * Implement proper error handling in WebSocket dispatch callbacks
 
   See `Exth.Transport.Transportable` for protocol details and
   `Exth.Transport.Http` for HTTP transport specifics.

@@ -199,6 +199,35 @@ end
   - Configurable adapters (Mint, Hackney, etc.)
   - Configurable headers and timeouts
 
+### WebSocket Transport
+
+The WebSocket transport provides full-duplex communication for real-time updates and subscriptions:
+
+```elixir
+# Provider configuration
+defmodule MyProvider do
+  use Exth.Provider,
+    transport_type: :websocket,
+    rpc_url: "wss://eth-mainnet.example.com",
+end
+
+# Direct client configuration
+{:ok, client} = Exth.Rpc.new(
+  transport_type: :websocket,
+  rpc_url: "wss://eth-mainnet.example.com",
+)
+
+# Example subscription
+request = Rpc.request("eth_subscribe", ["newHeads"])
+{:ok, response} = Rpc.send(client, request)
+```
+
+- 🌐 **WebSocket** (`:websocket`)
+  - Full-duplex communication
+  - Support for subscriptions
+  - Real-time updates
+  - Automatic connection management
+
 ### Custom Transport
 
 Implement your own transport by creating a module and implementing the
@@ -250,7 +279,7 @@ end
 ## Examples
 
 Check out our [examples](https://github.com/joaop21/exth/tree/main/examples)
-directory for practical usage examples
+directory for practical usage examples.
 
 ## Requirements
 
