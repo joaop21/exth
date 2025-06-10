@@ -185,6 +185,14 @@ defmodule Exth.Provider do
         )
       end
 
+      for {method_name, {rpc_method, param_types}} <- Methods.subscription_methods() do
+        Provider.generate_subscription_rpc_method(
+          method_name,
+          rpc_method,
+          param_types
+        )
+      end
+
       Provider.generate_get_client()
       Provider.generate_handle_response()
     end
@@ -234,6 +242,37 @@ defmodule Exth.Provider do
       def unquote(method_name)(unquote_splicing(function_params)) do
         get_client()
         |> Rpc.request(unquote(rpc_method), [unquote_splicing(request_params)])
+        |> Rpc.send()
+        |> handle_response()
+      end
+    end
+  end
+
+  defmacro generate_subscription_rpc_method(method_name, rpc_method, param_types) do
+    quote bind_quoted: [
+            method_name: method_name,
+            rpc_method: rpc_method,
+            param_types: param_types
+          ] do
+      param_vars = Enum.map(param_types, &Macro.var(&1, nil))
+      param_docs = Enum.map_join(param_types, "\n* ", &"#{&1}")
+
+      @doc """
+      Executes the #{rpc_method} JSON-RPC method.
+
+      ## Parameters
+      * #{param_docs}
+
+      ## Returns
+        * `{:ok, response}` - Successful request with decoded response
+        * `{:error, reason}` - Request failed with error details
+      """
+      @spec unquote(method_name)(
+              unquote_splicing(param_types |> Enum.map(fn _ -> quote do: term() end))
+            ) :: rpc_response()
+      def unquote(method_name)(unquote_splicing(param_vars)) do
+        get_client()
+        |> Rpc.request(unquote(rpc_method), [unquote_splicing(param_vars)])
         |> Rpc.send()
         |> handle_response()
       end
