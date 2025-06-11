@@ -15,6 +15,7 @@ defmodule Exth.Provider do
     * Connection pooling and reuse
     * Configurable transport layer
     * Dynamic configuration through both inline options and application config
+    * Support for WebSocket subscriptions
 
   ## Architecture
 
@@ -48,6 +49,24 @@ defmodule Exth.Provider do
   {:ok, block} = MyProvider.eth_getBlockByNumber(12345)
   ```
 
+  ### Subscription Usage
+
+  For WebSocket-based subscriptions, use the `:websocket` transport type:
+
+  ```elixir
+  defmodule MyProvider do
+    use Exth.Provider,
+      transport_type: :websocket,
+      rpc_url: "wss://my-eth-node.com"
+  end
+
+  # Subscribe to new blocks
+  {:ok, subscription_id} = MyProvider.subscribe("newHeads")
+
+  # Unsubscribe when done
+  {:ok, true} = MyProvider.unsubscribe(subscription_id)
+  ```
+
   ### Dynamic Configuration
 
   You can configure providers through both inline options and application config.
@@ -72,7 +91,7 @@ defmodule Exth.Provider do
 
   ### Required Options
 
-    * `:transport_type` - The transport type to use (`:http` or `:custom`)
+    * `:transport_type` - The transport type to use (`:http`, `:websocket`, or `:custom`)
     * `:rpc_url` - The URL of the Ethereum JSON-RPC endpoint
     * `:otp_app` - The application name for config lookup (required when using application config)
 
@@ -83,6 +102,15 @@ defmodule Exth.Provider do
     * Return `{:ok, result}` for successful calls
     * Return `{:error, reason}` for failures
     * Accept an optional `block_tag` parameter (defaults to "latest") where applicable
+
+  ### Subscription Methods
+
+  The following subscription methods are available when using WebSocket transport:
+
+    * `subscribe(type)` - Subscribe to a specific event type
+      * `type` - The subscription type (e.g., "newHeads", "logs", "newPendingTransactions")
+    * `unsubscribe(subscription_id)` - Unsubscribe from a specific subscription
+      * `subscription_id` - The ID returned from a previous subscribe call
 
   ## Error Handling
 
@@ -104,6 +132,12 @@ defmodule Exth.Provider do
 
   # Send raw transaction
   {:ok, tx_hash} = MyProvider.eth_sendRawTransaction("0x...")
+
+  # Subscribe to new blocks
+  {:ok, subscription_id} = MyProvider.subscribe("newHeads")
+
+  # Unsubscribe from subscription
+  {:ok, true} = MyProvider.unsubscribe(subscription_id)
   ```
 
   See `Exth.Provider.Methods` for a complete list of available RPC methods.
