@@ -219,14 +219,7 @@ defmodule Exth.Provider do
         )
       end
 
-      for {method_name, {rpc_method, param_types}} <- Methods.subscription_methods() do
-        Provider.generate_subscription_rpc_method(
-          method_name,
-          rpc_method,
-          param_types
-        )
-      end
-
+      Provider.generate_subscription_rpc_methods()
       Provider.generate_get_client()
       Provider.generate_handle_response()
     end
@@ -282,31 +275,104 @@ defmodule Exth.Provider do
     end
   end
 
-  defmacro generate_subscription_rpc_method(method_name, rpc_method, param_types) do
-    quote bind_quoted: [
-            method_name: method_name,
-            rpc_method: rpc_method,
-            param_types: param_types
-          ] do
-      param_vars = Enum.map(param_types, &Macro.var(&1, nil))
-      param_docs = Enum.map_join(param_types, "\n* ", &"#{&1}")
-
+  defmacro generate_subscription_rpc_methods do
+    quote do
       @doc """
-      Executes the #{rpc_method} JSON-RPC method.
+      Subscribes to new block headers.
 
-      ## Parameters
-      * #{param_docs}
+      This subscription will notify you whenever a new block is added to the chain.
 
       ## Returns
-        * `{:ok, response}` - Successful request with decoded response
-        * `{:error, reason}` - Request failed with error details
+        * `{:ok, subscription_id}` - Successfully subscribed, returns the subscription ID
+        * `{:error, reason}` - Subscription failed with error details
+
+      ## Examples
+
+          {:ok, subscription_id} = MyProvider.subscribe_blocks()
       """
-      @spec unquote(method_name)(
-              unquote_splicing(param_types |> Enum.map(fn _ -> quote do: term() end))
-            ) :: rpc_response()
-      def unquote(method_name)(unquote_splicing(param_vars)) do
+      @spec subscribe_blocks() :: rpc_response()
+      def subscribe_blocks, do: subscribe("newHeads")
+
+      @doc """
+      Subscribes to new pending transactions.
+
+      This subscription will notify you whenever a new transaction is added to the pending pool.
+
+      ## Returns
+        * `{:ok, subscription_id}` - Successfully subscribed, returns the subscription ID
+        * `{:error, reason}` - Subscription failed with error details
+
+      ## Examples
+
+          {:ok, subscription_id} = MyProvider.subscribe_pending_transactions()
+      """
+      @spec subscribe_pending_transactions() :: rpc_response()
+      def subscribe_pending_transactions, do: subscribe("newPendingTransactions")
+
+      @doc """
+      Subscribes to all logs without any filter.
+
+      ## Returns
+        * `{:ok, subscription_id}` - Successfully subscribed, returns the subscription ID
+        * `{:error, reason}` - Subscription failed with error details
+
+      ## Examples
+
+          {:ok, subscription_id} = MyProvider.subscribe_logs()
+      """
+      @spec subscribe_logs() :: rpc_response()
+      def subscribe_logs, do: subscribe("logs")
+
+      @doc """
+      Subscribes to logs matching the specified filter.
+
+      ## Parameters
+        * `filter` - Optional filter object to match logs against. The filter object can include:
+            * `address` - Contract address or array of addresses
+            * `topics` - Array of topics to match
+
+      ## Returns
+        * `{:ok, subscription_id}` - Successfully subscribed, returns the subscription ID
+        * `{:error, reason}` - Subscription failed with error details
+
+      ## Examples
+
+          # Subscribe to logs from a specific contract
+          filter = %{
+            address: "0x123...",
+            topics: ["0x456..."]
+          }
+          {:ok, subscription_id} = MyProvider.subscribe_logs(filter)
+      """
+      @spec subscribe_logs(nil | map()) :: rpc_response()
+      def subscribe_logs(nil), do: subscribe("logs")
+      def subscribe_logs(object), do: subscribe("logs", [object])
+
+      @doc """
+      Unsubscribes from a subscription.
+
+      ## Parameters
+        * `subscription_id` - The ID of the subscription to unsubscribe from
+
+      ## Returns
+        * `{:ok, true}` - Successfully unsubscribed
+        * `{:error, reason}` - Unsubscribe failed with error details
+
+      ## Examples
+
+          {:ok, true} = MyProvider.unsubscribe(subscription_id)
+      """
+      @spec unsubscribe(String.t()) :: rpc_response()
+      def unsubscribe(subscription_id) do
         get_client()
-        |> Rpc.request(unquote(rpc_method), [unquote_splicing(param_vars)])
+        |> Rpc.request("eth_unsubscribe", [subscription_id])
+        |> Rpc.send()
+        |> handle_response()
+      end
+
+      defp subscribe(subscription_type, args \\ []) when is_list(args) do
+        get_client()
+        |> Rpc.request("eth_subscribe", [subscription_type | args])
         |> Rpc.send()
         |> handle_response()
       end
