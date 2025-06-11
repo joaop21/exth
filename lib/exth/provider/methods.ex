@@ -129,11 +129,6 @@ defmodule Exth.Provider.Methods do
     call: {:eth_call, [:transaction], true}
   }
 
-  @subscription_methods %{
-    subscribe: {:eth_subscribe, [:type]},
-    unsubscribe: {:eth_unsubscribe, [:subscription_id]}
-  }
-
   @doc """
   Returns a map of all supported Ethereum JSON-RPC methods.
 
@@ -156,26 +151,4 @@ defmodule Exth.Provider.Methods do
   """
   @spec methods() :: %{atom() => {atom(), list(atom()), boolean()}}
   def methods, do: @rpc_methods
-
-  @doc """
-  Returns a map of all supported subscription JSON-RPC methods.
-
-  Each method entry contains:
-    * Key: The friendly method name used in the generated functions
-    * Value: A tuple of {rpc_method_name, parameter_list}
-
-  ## Returns
-
-    * Map of method definitions
-
-  ## Examples
-
-      iex> Exth.Provider.Methods.subscription_methods()
-      %{
-        subscribe: {:eth_subscribe, [:type]},
-        unsubscribe: {:eth_unsubscribe, [:subscription_id]}
-      }
-  """
-  @spec subscription_methods() :: %{atom() => {atom(), list(atom())}}
-  def subscription_methods, do: @subscription_methods
 end
