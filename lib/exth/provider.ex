@@ -15,6 +15,7 @@ defmodule Exth.Provider do
     * Connection pooling and reuse
     * Configurable transport layer
     * Dynamic configuration through both inline options and application config
+    * Support for WebSocket subscriptions
 
   ## Architecture
 
@@ -48,6 +49,24 @@ defmodule Exth.Provider do
   {:ok, block} = MyProvider.eth_getBlockByNumber(12345)
   ```
 
+  ### Subscription Usage
+
+  For WebSocket-based subscriptions, use the `:websocket` transport type:
+
+  ```elixir
+  defmodule MyProvider do
+    use Exth.Provider,
+      transport_type: :websocket,
+      rpc_url: "wss://my-eth-node.com"
+  end
+
+  # Subscribe to new blocks
+  {:ok, subscription_id} = MyProvider.subscribe("newHeads")
+
+  # Unsubscribe when done
+  {:ok, true} = MyProvider.unsubscribe(subscription_id)
+  ```
+
   ### Dynamic Configuration
 
   You can configure providers through both inline options and application config.
@@ -72,7 +91,7 @@ defmodule Exth.Provider do
 
   ### Required Options
 
-    * `:transport_type` - The transport type to use (`:http` or `:custom`)
+    * `:transport_type` - The transport type to use (`:http`, `:websocket`, or `:custom`)
     * `:rpc_url` - The URL of the Ethereum JSON-RPC endpoint
     * `:otp_app` - The application name for config lookup (required when using application config)
 
@@ -83,6 +102,15 @@ defmodule Exth.Provider do
     * Return `{:ok, result}` for successful calls
     * Return `{:error, reason}` for failures
     * Accept an optional `block_tag` parameter (defaults to "latest") where applicable
+
+  ### Subscription Methods
+
+  The following subscription methods are available when using WebSocket transport:
+
+    * `subscribe(type)` - Subscribe to a specific event type
+      * `type` - The subscription type (e.g., "newHeads", "logs", "newPendingTransactions")
+    * `unsubscribe(subscription_id)` - Unsubscribe from a specific subscription
+      * `subscription_id` - The ID returned from a previous subscribe call
 
   ## Error Handling
 
@@ -104,6 +132,12 @@ defmodule Exth.Provider do
 
   # Send raw transaction
   {:ok, tx_hash} = MyProvider.eth_sendRawTransaction("0x...")
+
+  # Subscribe to new blocks
+  {:ok, subscription_id} = MyProvider.subscribe("newHeads")
+
+  # Unsubscribe from subscription
+  {:ok, true} = MyProvider.unsubscribe(subscription_id)
   ```
 
   See `Exth.Provider.Methods` for a complete list of available RPC methods.
@@ -185,6 +219,7 @@ defmodule Exth.Provider do
         )
       end
 
+      Provider.generate_subscription_rpc_methods()
       Provider.generate_get_client()
       Provider.generate_handle_response()
     end
@@ -234,6 +269,110 @@ defmodule Exth.Provider do
       def unquote(method_name)(unquote_splicing(function_params)) do
         get_client()
         |> Rpc.request(unquote(rpc_method), [unquote_splicing(request_params)])
+        |> Rpc.send()
+        |> handle_response()
+      end
+    end
+  end
+
+  defmacro generate_subscription_rpc_methods do
+    quote do
+      @doc """
+      Subscribes to new block headers.
+
+      This subscription will notify you whenever a new block is added to the chain.
+
+      ## Returns
+        * `{:ok, subscription_id}` - Successfully subscribed, returns the subscription ID
+        * `{:error, reason}` - Subscription failed with error details
+
+      ## Examples
+
+          {:ok, subscription_id} = MyProvider.subscribe_blocks()
+      """
+      @spec subscribe_blocks() :: rpc_response()
+      def subscribe_blocks, do: subscribe("newHeads")
+
+      @doc """
+      Subscribes to new pending transactions.
+
+      This subscription will notify you whenever a new transaction is added to the pending pool.
+
+      ## Returns
+        * `{:ok, subscription_id}` - Successfully subscribed, returns the subscription ID
+        * `{:error, reason}` - Subscription failed with error details
+
+      ## Examples
+
+          {:ok, subscription_id} = MyProvider.subscribe_pending_transactions()
+      """
+      @spec subscribe_pending_transactions() :: rpc_response()
+      def subscribe_pending_transactions, do: subscribe("newPendingTransactions")
+
+      @doc """
+      Subscribes to all logs without any filter.
+
+      ## Returns
+        * `{:ok, subscription_id}` - Successfully subscribed, returns the subscription ID
+        * `{:error, reason}` - Subscription failed with error details
+
+      ## Examples
+
+          {:ok, subscription_id} = MyProvider.subscribe_logs()
+      """
+      @spec subscribe_logs() :: rpc_response()
+      def subscribe_logs, do: subscribe("logs")
+
+      @doc """
+      Subscribes to logs matching the specified filter.
+
+      ## Parameters
+        * `filter` - Optional filter object to match logs against. The filter object can include:
+            * `address` - Contract address or array of addresses
+            * `topics` - Array of topics to match
+
+      ## Returns
+        * `{:ok, subscription_id}` - Successfully subscribed, returns the subscription ID
+        * `{:error, reason}` - Subscription failed with error details
+
+      ## Examples
+
+          # Subscribe to logs from a specific contract
+          filter = %{
+            address: "0x123...",
+            topics: ["0x456..."]
+          }
+          {:ok, subscription_id} = MyProvider.subscribe_logs(filter)
+      """
+      @spec subscribe_logs(nil | map()) :: rpc_response()
+      def subscribe_logs(nil), do: subscribe("logs")
+      def subscribe_logs(object), do: subscribe("logs", [object])
+
+      @doc """
+      Unsubscribes from a subscription.
+
+      ## Parameters
+        * `subscription_id` - The ID of the subscription to unsubscribe from
+
+      ## Returns
+        * `{:ok, true}` - Successfully unsubscribed
+        * `{:error, reason}` - Unsubscribe failed with error details
+
+      ## Examples
+
+          {:ok, true} = MyProvider.unsubscribe(subscription_id)
+      """
+      @spec unsubscribe(String.t()) :: rpc_response()
+      def unsubscribe(subscription_id) do
+        get_client()
+        |> Rpc.request("eth_unsubscribe", [subscription_id])
+        |> Rpc.send()
+        |> handle_response()
+      end
+
+      defp subscribe(subscription_type, args \\ []) when is_list(args) do
+        get_client()
+        |> Rpc.request("eth_subscribe", [subscription_type | args])
         |> Rpc.send()
         |> handle_response()
       end

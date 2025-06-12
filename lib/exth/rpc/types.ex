@@ -5,7 +5,7 @@ defmodule Exth.Rpc.Types do
 
   @type id :: pos_integer()
   @type jsonrpc :: String.t()
-  @type method :: atom() | String.t()
+  @type method :: String.t()
   @type params :: list(term())
 
   @jsonrpc_version "2.0"

@@ -198,4 +198,102 @@ defmodule Exth.ProviderTest do
       assert {:arity, 2} = :erlang.fun_info(&TestProvider.get_balance/2, :arity)
     end
   end
+
+  describe "Subscription method generation" do
+    test "generates subscription methods with correct arity" do
+      methods = TestProvider.__info__(:functions)
+
+      # Verify that subscription methods are generated
+      assert Keyword.has_key?(methods, :subscribe_blocks)
+      assert Keyword.has_key?(methods, :subscribe_pending_transactions)
+      assert Keyword.has_key?(methods, :subscribe_logs)
+      assert Keyword.has_key?(methods, :unsubscribe)
+
+      # Verify correct arity for each method
+      assert methods[:subscribe_blocks] == 0
+      assert methods[:subscribe_pending_transactions] == 0
+      assert Keyword.get_values(methods, :subscribe_logs) == [0, 1]
+      assert methods[:unsubscribe] == 1
+    end
+
+    test "generates subscription methods with complete documentation" do
+      {:docs_v1, _, :elixir, "text/markdown", %{}, _, function_docs} =
+        Code.fetch_docs(TestProvider)
+
+      # Test documentation for subscribe_blocks
+      blocks_doc =
+        Enum.find(function_docs, fn
+          {{:function, :subscribe_blocks, _}, _, _, _, _} -> true
+          _ -> false
+        end)
+
+      assert blocks_doc != nil
+      doc_content = elem(blocks_doc, 3)
+      assert is_map(doc_content)
+      assert doc_content["en"] =~ "Returns"
+      assert doc_content["en"] =~ "Subscribes to new block headers."
+
+      # Test documentation for subscribe_logs
+      logs_doc =
+        Enum.find(function_docs, fn
+          {{:function, :subscribe_logs, _}, _, _, _, _} -> true
+          _ -> false
+        end)
+
+      assert logs_doc != nil
+      doc_content = elem(logs_doc, 3)
+      assert is_map(doc_content)
+      assert doc_content["en"] =~ "Subscribes to all logs without any filter."
+      assert doc_content["en"] =~ "Returns"
+      assert doc_content["en"] =~ "filter"
+
+      # Test documentation for unsubscribe
+      unsubscribe_doc =
+        Enum.find(function_docs, fn
+          {{:function, :unsubscribe, _}, _, _, _, _} -> true
+          _ -> false
+        end)
+
+      assert unsubscribe_doc != nil
+      doc_content = elem(unsubscribe_doc, 3)
+      assert is_map(doc_content)
+      assert doc_content["en"] =~ "Parameters"
+      assert doc_content["en"] =~ "Returns"
+      assert doc_content["en"] =~ "subscription_id"
+    end
+
+    test "generates subscription methods with correct type specifications" do
+      {:ok, specs} = Code.Typespec.fetch_specs(TestProvider)
+
+      # Test specs for subscription methods
+      blocks_spec = Enum.find(specs, fn {{name, _}, _} -> name == :subscribe_blocks end)
+
+      pending_spec =
+        Enum.find(specs, fn {{name, _}, _} -> name == :subscribe_pending_transactions end)
+
+      logs_spec = Enum.find(specs, fn {{name, _}, _} -> name == :subscribe_logs end)
+      unsubscribe_spec = Enum.find(specs, fn {{name, _}, _} -> name == :unsubscribe end)
+
+      assert blocks_spec != nil
+      assert pending_spec != nil
+      assert logs_spec != nil
+      assert unsubscribe_spec != nil
+    end
+
+    test "implements correct parameter handling for subscription methods" do
+      # Test that subscribe_blocks takes no parameters
+      assert {:arity, 0} = :erlang.fun_info(&TestProvider.subscribe_blocks/0, :arity)
+
+      # Test that subscribe_pending_transactions takes no parameters
+      assert {:arity, 0} =
+               :erlang.fun_info(&TestProvider.subscribe_pending_transactions/0, :arity)
+
+      # Test that subscribe_logs can be called with or without parameters
+      assert {:arity, 0} = :erlang.fun_info(&TestProvider.subscribe_logs/0, :arity)
+      assert {:arity, 1} = :erlang.fun_info(&TestProvider.subscribe_logs/1, :arity)
+
+      # Test that unsubscribe takes a subscription_id parameter
+      assert {:arity, 1} = :erlang.fun_info(&TestProvider.unsubscribe/1, :arity)
+    end
+  end
 end

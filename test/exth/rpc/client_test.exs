@@ -84,7 +84,7 @@ defmodule Exth.Rpc.ClientTest do
       rpc_call = Client.request(client, :eth_blockNumber, [])
       assert %Call{} = rpc_call
       request = rpc_call |> Call.get_requests() |> hd()
-      assert request.method == :eth_blockNumber
+      assert request.method == "eth_blockNumber"
       assert request.params == []
       assert request.id > 0
       assert request.jsonrpc == "2.0"
