@@ -2,8 +2,8 @@ defmodule Exth.Transport.Http do
   @moduledoc """
   HTTP transport implementation for JSON-RPC requests using Tesla.
 
-  Implements the `Exth.Transport.Transportable` protocol for making HTTP/HTTPS 
-  requests to JSON-RPC endpoints. Uses Tesla as the HTTP client with Mint as the 
+  Implements the `Exth.Transport.Transportable` protocol for making HTTP/HTTPS
+  requests to JSON-RPC endpoints. Uses Tesla as the HTTP client with Mint as the
   default adapter.
 
   ## Usage
@@ -25,7 +25,6 @@ defmodule Exth.Transport.Http do
 
   @adapter Tesla.Adapter.Mint
   @default_timeout 30_000
-  @user_agent "#{Application.spec(:exth, :description)}/#{Application.spec(:exth, :vsn)}"
 
   @doc """
   Makes an HTTP request to the JSON-RPC endpoint.
@@ -113,7 +112,7 @@ defmodule Exth.Transport.Http do
 
   defp build_headers(custom_headers) do
     [
-      {"user-agent", @user_agent},
+      {"user-agent", user_agent()},
       {"content-type", "application/json"}
       | normalize_headers(custom_headers)
     ]
@@ -122,6 +121,11 @@ defmodule Exth.Transport.Http do
 
   defp normalize_headers(headers) do
     Enum.map(headers, fn {k, v} -> {String.downcase(to_string(k)), v} end)
+  end
+
+  defp user_agent do
+    app = Application.get_application(__MODULE__)
+    "#{app}/#{Application.spec(app, :vsn)}"
   end
 end
 
