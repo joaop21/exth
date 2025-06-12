@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.0 - 2025-06-12
+
+### Added
+
+- Websocket transport implementation.
+- Support for subscriptions over websockets.
+- Provider functions for websocket subscriptions (`subscribe_blocks/0`,
+  `subscribe_pending_transactions/0`, `subscribe_logs/0`, `subscribe_logs/1`,
+  `unsubscribe/1`).
+- Internally added a `MessageHandler` responsible for handling incoming async
+  messages/notifications and routing them to the appropriate caller.
+- Internally added `Exth.Rpc.Call` struct that represents a chain of RPC calls
+  that can be executed in sequence or as a batch.
+- Internally changed `Exth.Rpc.Client` to use `Exth.Rpc.Call` structs that allow
+  batch requests to be made piping requests, like:
+
+  ```elixir
+  client
+  |> Rpc.request("eth_blockNumer", [])
+  |> Rpc.request("net_version", [])
+  |> Rpc.send()
+  ```
+
+### Changed
+
+- Transport layer was responsible for serializing, deserializing and sending
+  requests. Now, it's only responsibility is to send requests and receive
+  responses, to keep its scope as minimal as possible.
+- Encoding and decoding logic was moved to `Exth.Rpc` subdomain.
+
+### Fixed
+
+- made `:otp_app` not required in the Provider configuration
+
+[0.4.0]: https://github.com/joaop21/exth/releases/tag/v0.4.0
+
 ## 0.3.0 - 2025-04-11
 
 ### Added
