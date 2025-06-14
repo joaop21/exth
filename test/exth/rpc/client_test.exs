@@ -397,6 +397,13 @@ defmodule Exth.Rpc.ClientTest do
   describe "send/2 with WebSocket transport" do
     setup do
       client = Client.new(:websocket, rpc_url: @valid_url, module: AsyncTestTransport)
+
+      on_exit(fn ->
+        if pid = Process.whereis(client.handler) do
+          Process.exit(pid, :normal)
+        end
+      end)
+
       {:ok, client: client}
     end
 
