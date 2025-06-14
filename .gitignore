@@ -28,3 +28,6 @@ exth-*.tar
 # dialyzer
 /priv/plts/*.plt
 /priv/plts/*.plt.hash
+
+# local env
+.iex.exs
