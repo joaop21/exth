@@ -5,7 +5,10 @@ defmodule Exth.Application do
 
   @impl true
   def start(_type, _args) do
-    children = []
+    children = [
+      Exth.Transport.Supervisor
+    ]
+
     opts = [strategy: :one_for_one, name: Exth.Supervisor]
     Supervisor.start_link(children, opts)
   end
