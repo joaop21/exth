@@ -11,7 +11,8 @@ defmodule Exth.Transport.Supervisor do
 
   def init(_opts) do
     children = [
-      Transport.Registry
+      Transport.Registry,
+      Transport.Websocket.DynamicSupervisor
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
