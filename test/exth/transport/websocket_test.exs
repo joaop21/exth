@@ -15,7 +15,7 @@ defmodule Exth.Transport.WebsocketTest do
     end
 
     test "creates transport with valid options", %{base_opts: base_opts} do
-      expect(Websocket, :start_link, fn _opts -> {:ok, self()} end)
+      expect(Websocket.DynamicSupervisor, :start_websocket, fn _ws_spec -> {:ok, self()} end)
       opts = Keyword.put(base_opts, :rpc_url, @valid_ws_url)
       assert %Websocket{} = Websocket.new(opts)
     end
@@ -86,7 +86,7 @@ defmodule Exth.Transport.WebsocketTest do
     end
 
     test "accepts both ws and wss URLs" do
-      expect(Websocket, :start_link, 2, fn _opts -> {:ok, self()} end)
+      expect(Websocket.DynamicSupervisor, :start_websocket, 2, fn _ws_spec -> {:ok, self()} end)
 
       for url <- [@valid_ws_url, @valid_wss_url] do
         opts = [
@@ -101,7 +101,7 @@ defmodule Exth.Transport.WebsocketTest do
 
   describe "call/2 - sending messages" do
     setup do
-      expect(Websocket, :start_link, fn _opts -> {:ok, self()} end)
+      expect(Websocket.DynamicSupervisor, :start_websocket, fn _ws_spec -> {:ok, self()} end)
 
       {:ok, transport: Websocket.new(rpc_url: @valid_ws_url, dispatch_callback: fn _ -> :ok end)}
     end
