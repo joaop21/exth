@@ -120,6 +120,39 @@ defmodule Exth.Transport do
     * Use WebSocket transport for subscriptions and real-time updates
     * Implement proper error handling in WebSocket dispatch callbacks
 
+  ## Supervision Tree
+
+  The transport subdomain uses a hierarchical supervision tree to manage connections and state:
+
+  <pre class="mermaid">
+    flowchart TD
+      A["Exth.Supervisor :one_for_one"] --> B["Transport.Supervisor :one_for_one"]
+      B --> C["Transport.Registry"]
+      B --> D["Transport.Websocket.DynamicSupervisor :one_for_one"]
+      C -.registers.- E["Websocket"]
+      D --> E
+
+      E@{ shape: procs}
+  </pre>
+
+  ### Supervision Strategy
+
+  * **Exth.Supervisor**: Application-level supervisor using `:one_for_one` strategy
+  * **Exth.Transport.Supervisor**: Transport-level supervisor using `:one_for_one` strategy
+  * **Exth.Transport.Websocket.DynamicSupervisor**: Dynamic supervisor for WebSocket connections using `:one_for_one` strategy
+
+  ### Components
+
+  * **Exth.Transport.Registry**: Manages named processes for WebSocket connections
+  * **Exth.Transport.Websocket.DynamicSupervisor**: Dynamically starts and supervises individual WebSocket connections
+  * **WebSocket Connections**: Individual Fresh WebSocket processes managed by the dynamic supervisor
+
+  This supervision structure ensures:
+    * Fault isolation between different transport types
+    * Automatic restart of failed WebSocket connections
+    * Proper cleanup of resources
+    * Scalable connection management
+
   See `Exth.Transport.Transportable` for protocol details and
   `Exth.Transport.Http` for HTTP transport specifics.
   """
