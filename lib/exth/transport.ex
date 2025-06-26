@@ -126,10 +126,10 @@ defmodule Exth.Transport do
 
   <pre class="mermaid">
     flowchart TD
-      A["Exth.Supervisor :one_for_one"] --> B["Transport.Supervisor :one_for_one"]
-      B --> C["Transport.Registry"]
-      B --> D["Transport.Websocket.DynamicSupervisor :one_for_one"]
-      C -.registers.- E["Websocket"]
+      A["Exth.Supervisor :one_for_one"] --> B["Exth.Transport.Supervisor :one_for_one"]
+      B --> C["Exth.Transport.Registry"]
+      B --> D["Exth.Transport.Websocket.DynamicSupervisor :one_for_one"]
+      C -.registers.- E["Exth.Transport.Websocket"]
       D --> E
 
       E@{ shape: procs}
