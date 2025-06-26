@@ -59,6 +59,8 @@ defmodule Exth.Transport.Websocket do
 
   use Fresh
 
+  alias Exth.Transport
+
   @type t :: %__MODULE__{
           dispatch_callback: function(),
           pid: pid()
@@ -81,11 +83,14 @@ defmodule Exth.Transport.Websocket do
     with {:ok, rpc_url} <- validate_required_url(opts[:rpc_url]),
          :ok <- validate_url_format(rpc_url),
          {:ok, dispatch_callback} <- validate_required_dispatch_callback(opts[:dispatch_callback]) do
-      {:ok, pid} =
-        __MODULE__.start_link(
-          uri: rpc_url,
-          state: %State{dispatch_callback: dispatch_callback}
-        )
+      name = via_tuple({__MODULE__, rpc_url})
+
+      child_spec = {
+        __MODULE__,
+        uri: rpc_url, state: %State{dispatch_callback: dispatch_callback}, opts: [name: name]
+      }
+
+      {:ok, pid} = __MODULE__.DynamicSupervisor.start_websocket(child_spec)
 
       # this is needed to avoid a race condition where the websocket is not yet connected
       # and the subscriptions are not yet registered
@@ -147,6 +152,10 @@ defmodule Exth.Transport.Websocket do
   end
 
   defp validate_required_dispatch_callback(dispatch_callback), do: {:ok, dispatch_callback}
+
+  defp via_tuple(rpc_url) do
+    Transport.Registry.via_tuple(rpc_url)
+  end
 end
 
 defimpl Exth.Transport.Transportable, for: Exth.Transport.Websocket do
