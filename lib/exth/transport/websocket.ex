@@ -63,10 +63,10 @@ defmodule Exth.Transport.Websocket do
 
   @type t :: %__MODULE__{
           dispatch_callback: function(),
-          pid: pid()
+          name: {:via, module(), {module(), String.t()}}
         }
 
-  defstruct [:dispatch_callback, :pid]
+  defstruct [:dispatch_callback, :name]
 
   defmodule State do
     @moduledoc false
@@ -90,20 +90,20 @@ defmodule Exth.Transport.Websocket do
         uri: rpc_url, state: %State{dispatch_callback: dispatch_callback}, opts: [name: name]
       }
 
-      {:ok, pid} = __MODULE__.DynamicSupervisor.start_websocket(child_spec)
+      {:ok, _pid} = __MODULE__.DynamicSupervisor.start_websocket(child_spec)
 
       # this is needed to avoid a race condition where the websocket is not yet connected
       # and the subscriptions are not yet registered
       # Fresh should be able to handle this, but it doesn't (yet)
       Process.sleep(1_000)
 
-      %__MODULE__{dispatch_callback: dispatch_callback, pid: pid}
+      %__MODULE__{dispatch_callback: dispatch_callback, name: name}
     end
   end
 
   @spec call(t(), String.t()) :: :ok
-  def call(%__MODULE__{pid: pid}, encoded_request) do
-    Fresh.send(pid, {:text, encoded_request})
+  def call(%__MODULE__{name: name}, encoded_request) do
+    Fresh.send(name, {:text, encoded_request})
   end
 
   # Fresh callbacks
