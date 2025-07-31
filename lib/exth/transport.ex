@@ -190,16 +190,10 @@ defmodule Exth.Transport do
   """
   @spec new(type(), options()) :: Transportable.t()
   def new(type, opts) do
-    validate_opts(opts)
-
     module = get_transport_module(type, opts)
     transport = struct(module, %{})
 
     Transportable.new(transport, opts)
-  end
-
-  defp validate_opts(opts) do
-    opts[:rpc_url] || raise ArgumentError, "missing required option :rpc_url"
   end
 
   defp get_transport_module(:custom, opts) do
@@ -209,6 +203,7 @@ defmodule Exth.Transport do
   defp get_transport_module(type, opts) do
     case {type, opts[:module]} do
       {:http, nil} -> __MODULE__.Http
+      {:ipc, nil} -> __MODULE__.Ipc
       {:websocket, nil} -> __MODULE__.Websocket
       {_, module} when not is_nil(module) -> module
       _ -> raise ArgumentError, "invalid transport type: #{inspect(type)}"
