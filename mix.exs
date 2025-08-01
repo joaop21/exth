@@ -43,7 +43,7 @@ defmodule Exth.MixProject do
       # Websocket
       {:fresh, "~> 0.4.4"},
       # IPC
-      {:nimble_pool, "~> 1.0"},
+      {:nimble_pool, "~> 1.1"},
 
       # ex_check
       {:ex_check, "~> 0.16.0", only: :dev, runtime: false},
