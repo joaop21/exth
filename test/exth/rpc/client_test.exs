@@ -39,7 +39,7 @@ defmodule Exth.Rpc.ClientTest do
     end
 
     test "fails to create WebSocket client without URL" do
-      assert_raise ArgumentError, "missing required option :rpc_url", fn ->
+      assert_raise ArgumentError, fn ->
         Client.new(:websocket, [])
       end
     end
@@ -50,8 +50,8 @@ defmodule Exth.Rpc.ClientTest do
       end
     end
 
-    test "fails to create client without URL" do
-      assert_raise ArgumentError, "missing required option :rpc_url", fn ->
+    test "fails to create HTTP client without URL" do
+      assert_raise ArgumentError, fn ->
         Client.new(:http, [])
       end
     end

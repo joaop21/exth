@@ -51,13 +51,6 @@ defmodule Exth.Rpc.Client do
       # or
       {:ok, responses} = Client.send(client, [request1, request2])
 
-  ## Client Configuration
-
-  The client accepts the following options:
-
-    * `:rpc_url` - (Required) The endpoint URL
-    * other options that are specific to the transport type
-
   ## Request ID Generation
 
   The client uses Erlang's `:atomics` for thread-safe, monotonic request ID
@@ -103,7 +96,7 @@ defmodule Exth.Rpc.Client do
   alias Exth.Transport
   alias Exth.Transport.Transportable
 
-  @transport_types [:http, :custom, :websocket]
+  @transport_types [:custom, :http, :ipc, :websocket]
 
   @type t :: %__MODULE__{
           counter: :atomics.atomics_ref(),
@@ -115,8 +108,6 @@ defmodule Exth.Rpc.Client do
 
   @spec new(Transport.type(), keyword()) :: t()
   def new(type, opts) when type in @transport_types do
-    validate_required_opts(opts)
-
     case type do
       :websocket ->
         {:ok, handler} = MessageHandler.new(opts[:rpc_url])
@@ -189,11 +180,6 @@ defmodule Exth.Rpc.Client do
   ###
   ### Private Functions
   ###
-
-  @doc false
-  defp validate_required_opts(opts) do
-    opts[:rpc_url] || raise ArgumentError, "missing required option :rpc_url"
-  end
 
   @doc false
   defp do_send(%__MODULE__{} = client, %Request{} = request) do
