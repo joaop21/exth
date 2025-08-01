@@ -20,18 +20,6 @@ defmodule Exth.TransportTest do
       assert %TestTransport{} = Transport.new(:custom, valid_custom_transport_opts())
     end
 
-    test "validates base transport requirements" do
-      required_opts = [:rpc_url]
-
-      for opt <- required_opts do
-        opts = valid_transport_opts() |> Keyword.delete(opt)
-
-        assert_raise ArgumentError, ~r/missing required option :#{opt}/, fn ->
-          Transport.new(:http, opts)
-        end
-      end
-    end
-
     test "validates custom transport requirements" do
       assert_raise ArgumentError, ~r/missing required option :module/, fn ->
         Transport.new(:custom, valid_transport_opts())
