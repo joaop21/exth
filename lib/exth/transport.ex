@@ -45,18 +45,16 @@ defmodule Exth.Transport do
 
   ## Configuration
 
-  Common options for all transports:
-
-    * `:rpc_url` - (Required) The endpoint URL
-
   HTTP-specific options:
 
+    * `:rpc_url` - The endpoint URL
     * `:headers` - Additional HTTP headers
     * `:timeout` - Request timeout in milliseconds (default: 30000)
     * `:adapter` - Tesla adapter to use (default: Tesla.Adapter.Mint)
 
   WebSocket-specific options:
 
+    * `:rpc_url` - The endpoint URL
     * `:dispatch_callback` - Callback function to handle incoming messages
     * `:module` - Optional custom WebSocket implementation
 
