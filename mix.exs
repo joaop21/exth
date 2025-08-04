@@ -42,6 +42,8 @@ defmodule Exth.MixProject do
       {:tesla, "~> 1.14"},
       # Websocket
       {:fresh, "~> 0.4.4"},
+      # IPC
+      {:nimble_pool, "~> 1.1"},
 
       # ex_check
       {:ex_check, "~> 0.16.0", only: :dev, runtime: false},
