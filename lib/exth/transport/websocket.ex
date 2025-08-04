@@ -83,7 +83,7 @@ defmodule Exth.Transport.Websocket do
     with {:ok, rpc_url} <- validate_required_url(opts[:rpc_url]),
          :ok <- validate_url_format(rpc_url),
          {:ok, dispatch_callback} <- validate_required_dispatch_callback(opts[:dispatch_callback]) do
-      name = via_tuple({__MODULE__, rpc_url})
+      name = via_tuple(rpc_url)
 
       child_spec = {
         __MODULE__,
@@ -154,7 +154,7 @@ defmodule Exth.Transport.Websocket do
   defp validate_required_dispatch_callback(dispatch_callback), do: {:ok, dispatch_callback}
 
   defp via_tuple(rpc_url) do
-    Transport.Registry.via_tuple(rpc_url)
+    Transport.Registry.via_tuple({__MODULE__, rpc_url})
   end
 end
 
