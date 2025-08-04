@@ -4,6 +4,8 @@ defmodule Exth.Transport.Ipc.ConnectionPool do
   alias Exth.Transport
   alias Exth.Transport.Ipc
 
+  defstruct [:lazy, :max_idle_pings, :name, :pool_size, :worker, :worker_idle_timeout]
+
   @pool_timeout 30_000
 
   ###
@@ -32,12 +34,12 @@ defmodule Exth.Transport.Ipc.ConnectionPool do
 
     {:ok, _pid} = Ipc.DynamicSupervisor.start_pool({NimblePool, pool_opts})
 
-    {:ok, pool_opts}
+    {:ok, struct(__MODULE__, pool_opts)}
   end
 
-  def call(pool, request, timeout) do
+  def call(%__MODULE__{} = pool, request, timeout) do
     NimblePool.checkout!(
-      pool,
+      pool.name,
       :checkout,
       fn _from, socket ->
         result = send_request(socket, request, timeout)
