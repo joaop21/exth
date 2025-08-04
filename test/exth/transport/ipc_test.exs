@@ -6,20 +6,22 @@ defmodule Exth.Transport.IpcTest do
 
   describe "new/1" do
     test "creates a new IPC transport with valid path" do
-      expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, "pool_name"} end)
+      pool = %Ipc.ConnectionPool{name: "pool_name"}
+      expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, pool} end)
 
       transport = Ipc.new(path: "/tmp/test.sock")
 
       assert %Ipc{
-               pool: "pool_name",
                path: "/tmp/test.sock",
+               pool: ^pool,
                socket_opts: [:binary, active: false, reuseaddr: true],
                timeout: 30_000
              } = transport
     end
 
     test "creates a new IPC transport with custom options" do
-      expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, "pool_name"} end)
+      pool = %Ipc.ConnectionPool{name: "pool_name"}
+      expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, pool} end)
 
       transport =
         Ipc.new(
@@ -30,6 +32,7 @@ defmodule Exth.Transport.IpcTest do
 
       assert %Ipc{
                path: "/tmp/custom.sock",
+               pool: ^pool,
                socket_opts: [:binary, active: false],
                timeout: 15_000
              } = transport
@@ -50,17 +53,18 @@ defmodule Exth.Transport.IpcTest do
 
   describe "call/2" do
     setup do
-      pool_name = "pool_name"
-      expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, pool_name} end)
+      path = "/tmp/test.sock"
+      pool = %Ipc.ConnectionPool{name: "pool_name"}
+      expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, pool} end)
 
-      {:ok, transport: Ipc.new(path: "/tmp/test.sock"), pool_name: pool_name}
+      {:ok, transport: Ipc.new(path: path), pool: pool}
     end
 
-    test "sends request through socket", %{transport: transport, pool_name: pool_name} do
+    test "sends request through socket", %{transport: transport, pool: pool} do
       request = Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: []})
       response = Jason.encode!(%{jsonrpc: "2.0", id: 1, result: "0x1"})
 
-      expect(Ipc.ConnectionPool, :call, fn ^pool_name, ^request, 30_000 -> {:ok, response} end)
+      expect(Ipc.ConnectionPool, :call, fn ^pool, ^request, 30_000 -> {:ok, response} end)
 
       result = Ipc.call(transport, request)
 
@@ -69,11 +73,11 @@ defmodule Exth.Transport.IpcTest do
 
     test "returns error when something is wrong with the socket", %{
       transport: transport,
-      pool_name: pool_name
+      pool: pool
     } do
       request = Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: []})
 
-      expect(Ipc.ConnectionPool, :call, fn ^pool_name, ^request, 30_000 ->
+      expect(Ipc.ConnectionPool, :call, fn ^pool, ^request, 30_000 ->
         {:error, {:socket_error, :bad_data}}
       end)
 
