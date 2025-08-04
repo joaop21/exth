@@ -6,9 +6,12 @@ defmodule Exth.Transport.IpcTest do
 
   describe "new/1" do
     test "creates a new IPC transport with valid path" do
+      expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, "pool_name"} end)
+
       transport = Ipc.new(path: "/tmp/test.sock")
 
       assert %Ipc{
+               pool: "pool_name",
                path: "/tmp/test.sock",
                socket_opts: [:binary, active: false, reuseaddr: true],
                timeout: 30_000
@@ -16,6 +19,8 @@ defmodule Exth.Transport.IpcTest do
     end
 
     test "creates a new IPC transport with custom options" do
+      expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, "pool_name"} end)
+
       transport =
         Ipc.new(
           path: "/tmp/custom.sock",
@@ -44,42 +49,33 @@ defmodule Exth.Transport.IpcTest do
   end
 
   describe "call/2" do
-    test "returns error when socket is not available" do
-      transport = Ipc.new(path: "/tmp/nonexistent.sock")
-      request = Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: []})
+    setup do
+      pool_name = "pool_name"
+      expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, pool_name} end)
 
-      result = Ipc.call(transport, request)
-
-      assert {:error, {:connection_error, :enoent}} = result
+      {:ok, transport: Ipc.new(path: "/tmp/test.sock"), pool_name: pool_name}
     end
 
-    test "sends request through socket" do
-      path = "/tmp/test.sock"
-      transport = Ipc.new(path: path)
-
+    test "sends request through socket", %{transport: transport, pool_name: pool_name} do
       request = Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: []})
       response = Jason.encode!(%{jsonrpc: "2.0", id: 1, result: "0x1"})
 
-      socket = %{}
-      expect(Ipc.Socket, :connect, fn ^path, _socket_opts -> {:ok, socket} end)
-      expect(Ipc.Socket, :send_request, fn ^socket, ^request, 30_000 -> {:ok, response} end)
-      expect(Ipc.Socket, :close, fn ^socket -> :ok end)
+      expect(Ipc.ConnectionPool, :call, fn ^pool_name, ^request, 30_000 -> {:ok, response} end)
 
       result = Ipc.call(transport, request)
 
       assert {:ok, ^response} = result
     end
 
-    test "returns error when something is wrong with the socket" do
-      path = "/tmp/test.sock"
-      transport = Ipc.new(path: path)
-
+    test "returns error when something is wrong with the socket", %{
+      transport: transport,
+      pool_name: pool_name
+    } do
       request = Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: []})
 
-      socket = %{}
-      expect(Ipc.Socket, :connect, fn ^path, _socket_opts -> {:ok, socket} end)
-      expect(Ipc.Socket, :send_request, fn ^socket, ^request, 30_000 -> {:error, :bad_data} end)
-      expect(Ipc.Socket, :close, fn ^socket -> :ok end)
+      expect(Ipc.ConnectionPool, :call, fn ^pool_name, ^request, 30_000 ->
+        {:error, {:socket_error, :bad_data}}
+      end)
 
       result = Ipc.call(transport, request)
 
