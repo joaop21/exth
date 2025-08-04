@@ -12,6 +12,7 @@ defmodule Exth.Transport.Supervisor do
   def init(_opts) do
     children = [
       Transport.Registry,
+      Transport.Ipc.DynamicSupervisor,
       Transport.Websocket.DynamicSupervisor
     ]
 
