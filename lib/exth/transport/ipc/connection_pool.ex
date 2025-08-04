@@ -14,14 +14,25 @@ defmodule Exth.Transport.Ipc.ConnectionPool do
     path = Keyword.fetch!(opts, :path)
     socket_opts = Keyword.fetch!(opts, :socket_opts)
 
+    # pool opts
+    {pool_size, opts} = Keyword.pop(opts, :pool_size, 10)
+    {pool_lazy_workers, opts} = Keyword.pop(opts, :pool_lazy_workers, true)
+    {pool_worker_idle_timeout, opts} = Keyword.pop(opts, :pool_worker_idle_timeout, nil)
+    {pool_max_idle_pings, _opts} = Keyword.pop(opts, :pool_max_idle_pings, -1)
     pool_name = via_tuple(path)
 
-    pool_spec =
-      {NimblePool, worker: {__MODULE__, {path, socket_opts}}, name: pool_name}
+    pool_opts = [
+      lazy: pool_lazy_workers,
+      max_idle_pings: pool_max_idle_pings,
+      name: pool_name,
+      pool_size: pool_size,
+      worker: {__MODULE__, {path, socket_opts}},
+      worker_idle_timeout: pool_worker_idle_timeout
+    ]
 
-    {:ok, _pid} = Ipc.DynamicSupervisor.start_pool(pool_spec)
+    {:ok, _pid} = Ipc.DynamicSupervisor.start_pool({NimblePool, pool_opts})
 
-    {:ok, pool_name}
+    {:ok, pool_opts}
   end
 
   def call(pool, request, timeout) do
