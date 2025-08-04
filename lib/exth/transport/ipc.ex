@@ -14,11 +14,11 @@ defmodule Exth.Transport.Ipc do
       timeout = opts[:timeout] || @default_timeout
       socket_opts = opts[:socket_opts] || @default_socket_opts
 
-      {:ok, pool_name} = ConnectionPool.start(path: path, socket_opts: socket_opts)
+      {:ok, %ConnectionPool{} = pool} = ConnectionPool.start(opts ++ [socket_opts: socket_opts])
 
       %__MODULE__{
         path: path,
-        pool: pool_name,
+        pool: pool,
         socket_opts: socket_opts,
         timeout: timeout
       }
