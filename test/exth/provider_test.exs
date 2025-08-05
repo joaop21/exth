@@ -103,6 +103,35 @@ defmodule Exth.ProviderTest do
         InvalidTransportProvider.get_client()
       end
     end
+
+    test "accepts :path when transport_type is :ipc" do
+      # Create a provider with invalid transport config
+      defmodule IpcTestProvider do
+        use Exth.Provider,
+          otp_app: :exth,
+          transport_type: :ipc,
+          path: "/tmp/valid.sock"
+      end
+
+      # Get the client to force compilation
+      client = IpcTestProvider.get_client()
+
+      assert client.transport.path == "/tmp/valid.sock"
+    end
+
+    test "does not accept :path when transport_type is not :ipc" do
+      # Create a provider with invalid transport config
+      defmodule InvalidPathTestProvider do
+        use Exth.Provider,
+          otp_app: :exth,
+          transport_type: :custom,
+          path: "/tmp/valid.sock"
+      end
+
+      assert_raise KeyError, fn ->
+        InvalidPathTestProvider.get_client()
+      end
+    end
   end
 
   describe "RPC method generation" do
