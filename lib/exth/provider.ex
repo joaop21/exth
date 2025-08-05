@@ -92,7 +92,7 @@ defmodule Exth.Provider do
   ### Required Options
 
     * `:transport_type` - The transport type to use (`:http`, `:websocket`, or `:custom`)
-    * `:rpc_url` - The URL of the Ethereum JSON-RPC endpoint
+    * `:rpc_url` | `:path` - The URL/path of the Ethereum JSON-RPC endpoint
     * `:otp_app` - The application name for config lookup (required when using application config)
 
   ## Generated Functions
@@ -390,7 +390,7 @@ defmodule Exth.Provider do
 
       The client is uniquely identified by the combination of:
         * transport_type (e.g., :http)
-        * rpc_url (the endpoint URL)
+        * rpc_url | path (the endpoint URL)
 
       ## Returns
 
@@ -417,15 +417,23 @@ defmodule Exth.Provider do
         config = Keyword.merge(app_config, @provider_inline_opts)
 
         transport_type = Keyword.fetch!(config, :transport_type)
-        rpc_url = Keyword.fetch!(config, :rpc_url)
 
-        case ClientCache.get_client(transport_type, rpc_url) do
+        rpc =
+          case transport_type do
+            :ipc ->
+              Keyword.fetch!(config, :path)
+
+            _ ->
+              Keyword.fetch!(config, :rpc_url)
+          end
+
+        case ClientCache.get_client(transport_type, rpc) do
           {:ok, client} ->
             client
 
           {:error, :not_found} ->
             client = Rpc.new_client(transport_type, config)
-            ClientCache.create_client(transport_type, rpc_url, client)
+            ClientCache.create_client(transport_type, rpc, client)
         end
       end
     end
