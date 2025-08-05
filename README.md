@@ -228,6 +228,51 @@ request = Rpc.request("eth_subscribe", ["newHeads"])
   - Real-time updates
   - Automatic connection management
 
+### IPC Transport
+
+The IPC transport provides communication with local Ethereum nodes via Unix domain sockets:
+
+```elixir
+# Provider configuration
+defmodule MyProvider do
+  use Exth.Provider,
+    transport_type: :ipc,
+    path: "/tmp/ethereum.ipc",
+    # Optional IPC-specific configuration
+    timeout: 30_000, # Request timeout in ms
+    pool_size: 10, # Number of connections in the pool
+    socket_opts: [:binary, active: false, reuseaddr: true]
+end
+
+# Direct client configuration
+{:ok, client} = Exth.Rpc.new(
+  transport_type: :ipc,
+  path: "/tmp/ethereum.ipc",
+  timeout: 30_000,
+  pool_size: 5
+)
+
+# Make requests
+request = Rpc.request("eth_blockNumber", [])
+{:ok, response} = Rpc.send(client, request)
+```
+
+- 🔌 **IPC** (`:ipc`)
+  - Unix domain socket communication
+  - Connection pooling with NimblePool
+  - Low latency for local nodes
+  - Efficient resource utilization
+  - **Note**: Only available on Unix-like systems
+
+**IPC Configuration Options:**
+- `:path` - (required) The Unix domain socket path (e.g., "/tmp/ethereum.ipc")
+- `:timeout` - Request timeout in milliseconds (default: 30000)
+- `:socket_opts` - TCP socket options (default: [:binary, active: false, reuseaddr: true])
+- `:pool_size` - Number of connections in the pool (default: 10)
+- `:pool_lazy_workers` - Whether to create workers lazily (default: true)
+- `:pool_worker_idle_timeout` - Worker idle timeout (default: nil)
+- `:pool_max_idle_pings` - Maximum idle pings before worker termination (default: -1)
+
 ### Custom Transport
 
 Implement your own transport by creating a module and implementing the
