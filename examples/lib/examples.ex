@@ -18,6 +18,24 @@ defmodule Examples do
     end)
   end
 
+  def run_with_ipc(address \\ @vitalik_address) do
+    case Provider.IpcEthereum.block_number() do
+      {:ok, block_number} ->
+        case Provider.IpcEthereum.get_balance(address, block_number) do
+          {:ok, balance} ->
+            Logger.info("IPC Ethereum: block_number: #{block_number}")
+            Logger.info("IPC Ethereum: get_balance: #{balance}")
+
+          {:error, reason} ->
+            Logger.error("IPC Ethereum: failed to get balance: #{inspect(reason)}")
+        end
+
+      {:error, reason} ->
+        Logger.error("IPC Ethereum: failed to get block number: #{inspect(reason)}")
+        Logger.info("Make sure you have a local Ethereum node running with IPC enabled")
+    end
+  end
+
   def run_with_clients(address \\ @vitalik_address) do
     [Provider.Ethereum, Provider.Polygon]
     |> Enum.map(fn provider -> {provider, provider.get_client()} end)

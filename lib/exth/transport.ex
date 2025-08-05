@@ -19,11 +19,8 @@ defmodule Exth.Transport do
   Currently supported:
     * `:http` - HTTP/HTTPS transport using Tesla with Mint adapter
     * `:websocket` - WebSocket transport using Fresh
+    * `:ipc` - Unix domain socket transport using NimblePool
     * `:custom` - Custom transport implementations
-
-  Coming soon:
-    * `:ws` - WebSocket transport
-    * `:ipc` - Unix domain socket transport
 
   ## Usage
 
@@ -38,6 +35,13 @@ defmodule Exth.Transport do
       transport = Transport.new(:websocket,
         rpc_url: "wss://mainnet.infura.io/ws/v3/YOUR-PROJECT-ID",
         dispatch_callback: fn response -> handle_response(response) end
+      )
+
+      # Create an IPC transport
+      transport = Transport.new(:ipc,
+        path: "/tmp/ethereum.ipc",
+        timeout: 30_000,
+        pool_size: 10
       )
 
       # Make requests
@@ -57,6 +61,16 @@ defmodule Exth.Transport do
     * `:rpc_url` - The endpoint URL
     * `:dispatch_callback` - Callback function to handle incoming messages
     * `:module` - Optional custom WebSocket implementation
+
+  IPC-specific options:
+
+    * `:path` - The Unix domain socket path (e.g., "/tmp/ethereum.ipc")
+    * `:timeout` - Request timeout in milliseconds (default: 30000)
+    * `:socket_opts` - TCP socket options (default: [:binary, active: false, reuseaddr: true])
+    * `:pool_size` - Number of connections in the pool (default: 10)
+    * `:pool_lazy_workers` - Whether to create workers lazily (default: true)
+    * `:pool_worker_idle_timeout` - Worker idle timeout (default: nil)
+    * `:pool_max_idle_pings` - Maximum idle pings before worker termination (default: -1)
 
   ## Custom Transport Implementation
 
@@ -106,6 +120,10 @@ defmodule Exth.Transport do
     * `{:error, :connection_failed}` - Failed to establish WebSocket connection
     * `{:error, :invalid_url}` - Invalid WebSocket URL format
     * `{:error, :missing_callback}` - Missing dispatch callback
+
+  IPC-specific errors:
+    * `{:error, {:socket_error, reason}}` - Socket communication error
+    * `{:error, :timeout}` - Request timeout
 
   ## Best Practices
 

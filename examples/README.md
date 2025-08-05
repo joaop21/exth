@@ -51,9 +51,17 @@ For real-time updates and subscriptions:
 iex> Examples.subscribe_to_new_blocks()
 ```
 
+### 4. Using IPC Transport
+
+For local node communication via Unix domain sockets:
+
+```elixir
+iex> Examples.run_with_ipc()
+```
+
 ## Configuration
 
-The app demonstrates three different ways to configure providers:
+The app demonstrates four different ways to configure providers:
 
 1. **Runtime Configuration** (Ethereum Provider):
 
@@ -64,5 +72,9 @@ The app demonstrates three different ways to configure providers:
    - Configuration is specified directly in the provider module
 
 3. **WebSocket Subscriptions** (WsEthereum Provider):
+
+   - Configuration is specified directly in the provider module
+
+4. **IPC Configuration** (IpcEthereum Provider):
 
    - Configuration is specified directly in the provider module
