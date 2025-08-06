@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.5.0 - 2025-08-06
+
+This release adds IPC transport support for local Ethereum node communication via Unix domain sockets.
+
+### Added
+
+- IPC transport implementation using Unix domain sockets
+- Connection pooling with NimblePool for efficient resource utilization
+- Comprehensive IPC transport documentation and examples
+
+### Changed
+
+- Updated transport documentation to include IPC transport options
+- Enhanced examples with IPC transport usage
+- Added IPC transport to the list of supported transport types
+- Updated transport factory to support `:ipc` transport type
+
+[0.5.0]: https://github.com/joaop21/exth/releases/tag/v0.5.0
+
 ## 0.4.2 - 2025-07-04
 
 This release intends to improve the reliability and fault-tolerance of the
