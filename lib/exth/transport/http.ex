@@ -1,20 +1,39 @@
 defmodule Exth.Transport.Http do
   @moduledoc """
-  HTTP transport implementation for JSON-RPC requests using Tesla.
+  HTTP transport implementation for JSON-RPC communication with EVM nodes.
 
-  Implements the `Exth.Transport.Transportable` protocol for making HTTP/HTTPS
-  requests to JSON-RPC endpoints. Uses Tesla as the HTTP client with Mint as the
-  default adapter.
+  This module provides HTTP/HTTPS transport capabilities using Tesla HTTP client with
+  configurable middleware, timeouts, and custom headers.
 
-  ## Usage
+  ## Features
 
-      transport = Transportable.new(
-        %Exth.Transport.Http{},
-        rpc_url: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID",
+    * HTTP/HTTPS transport support
+    * Configurable timeouts and custom headers
+    * Automatic URL validation and formatting
+    * Built-in middleware for base URL, headers, and timeout
+    * Customizable HTTP adapter (defaults to Mint)
+
+  ## Configuration Options
+
+    * `:rpc_url` - Required HTTP/HTTPS endpoint URL
+    * `:timeout` - Request timeout in milliseconds (default: 30,000ms)
+    * `:headers` - Custom HTTP headers to include with requests
+    * `:adapter` - Custom Tesla adapter (defaults to `Tesla.Adapter.Mint`)
+
+  ## Example Usage
+
+      # Create HTTP transport
+      {:ok, transport} = Transport.new(:http,
+        rpc_url: "https://eth-mainnet.example.com",
+        timeout: 15_000,
+        headers: [{"authorization", "Bearer token"}]
       )
 
-      {:ok, response} = Transportable.call(transport, request)
+      # Make HTTP request
+      {:ok, response} = Transport.call(transport, json_request)
   """
+
+  use Exth.Transport
 
   @typedoc "HTTP transport configuration"
   @type t :: %__MODULE__{
@@ -26,16 +45,8 @@ defmodule Exth.Transport.Http do
   @adapter Tesla.Adapter.Mint
   @default_timeout 30_000
 
-  @doc """
-  Makes an HTTP request to the JSON-RPC endpoint.
-
-  Returns:
-    * `{:ok, response}` - Successful request with encoded response
-    * `{:error, {:http_error, status}}` - HTTP error response
-    * `{:error, reason}` - Other errors (network, timeout, etc)
-  """
-  @spec call(t(), String.t()) :: {:ok, String.t()} | {:error, term()}
-  def call(%__MODULE__{client: client}, request) do
+  @impl true
+  def handle_request(%__MODULE__{client: client}, request) do
     case Tesla.post(client, "", request) do
       {:ok, %Tesla.Env{status: 200, body: response}} -> {:ok, response}
       {:ok, %Tesla.Env{status: status}} -> {:error, {:http_error, status}}
@@ -43,20 +54,12 @@ defmodule Exth.Transport.Http do
     end
   end
 
-  @doc """
-  Creates a new HTTP transport with the given options.
-
-  ## Options
-    * `:rpc_url` - (required) The HTTP/HTTPS endpoint URL
-    * `:adapter` - Tesla adapter to use (defaults to `Tesla.Adapter.Mint`)
-    * `:headers` - Additional HTTP headers for requests
-    * `:timeout` - Request timeout in milliseconds (defaults to 30000)
-  """
-  @spec new(keyword()) :: t()
-  def new(opts) do
-    with {:ok, rpc_url} <- validate_required_url(opts[:rpc_url]),
-         :ok <- validate_url_format(rpc_url) do
-      build_client(opts, rpc_url)
+  @impl true
+  def init_transport(custom_opts, _opts) do
+    with {:ok, rpc_url} <- validate_required_url(custom_opts[:rpc_url]),
+         :ok <- validate_url_format(rpc_url),
+         client <- build_client(custom_opts, rpc_url) do
+      {:ok, %__MODULE__{client: client}}
     end
   end
 
@@ -70,9 +73,7 @@ defmodule Exth.Transport.Http do
 
     adapter = opts[:adapter] || @adapter
 
-    client = Tesla.client(middleware, adapter)
-
-    %__MODULE__{client: client}
+    Tesla.client(middleware, adapter)
   end
 
   defp build_middleware(config) do
@@ -84,27 +85,29 @@ defmodule Exth.Transport.Http do
   end
 
   defp validate_required_url(nil) do
-    raise ArgumentError, "RPC URL is required but was not provided"
-  end
-
-  defp validate_required_url(url) when not is_binary(url) do
-    raise ArgumentError, "Invalid RPC URL: expected string, got: #{inspect(url)}"
+    {:error, "RPC URL is required but was not provided"}
   end
 
   defp validate_required_url(url), do: {:ok, url}
 
+  defp validate_url_format(url) when not is_binary(url) do
+    {:error, "Invalid RPC URL format: expected string, got: #{inspect(url)}"}
+  end
+
   defp validate_url_format(url) do
     case URI.parse(url) do
+      %URI{scheme: scheme, host: _host} when scheme not in ["http", "https"] ->
+        {:error,
+         "Invalid RPC URL format: #{inspect(url)}. The URL must start with http:// or https://"}
+
+      %URI{scheme: _scheme, host: ""} ->
+        {:error, "Invalid RPC URL format: #{inspect(url)}. The URL must contain a valid host"}
+
       %URI{scheme: scheme, host: host} when scheme in ["http", "https"] and not is_nil(host) ->
         :ok
 
       _ ->
-        raise ArgumentError, """
-        Invalid RPC URL format: #{inspect(url)}
-        The URL must:
-          - Start with http:// or https://
-          - Contain a valid host
-        """
+        {:error, "Invalid RPC URL format: #{inspect(url)}"}
     end
   end
 
@@ -127,9 +130,4 @@ defmodule Exth.Transport.Http do
     app = Application.get_application(__MODULE__)
     "#{app}/#{Application.spec(app, :vsn)}"
   end
-end
-
-defimpl Exth.Transport.Transportable, for: Exth.Transport.Http do
-  def new(_transport, opts), do: Exth.Transport.Http.new(opts)
-  def call(transport, request), do: Exth.Transport.Http.call(transport, request)
 end
