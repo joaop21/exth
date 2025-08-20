@@ -29,7 +29,7 @@ defmodule Exth.Transport do
       {:ok, transport} = Transport.new(:http, rpc_url: "https://eth-mainnet.example.com")
 
       # Make a request
-      {:ok, response} = Transport.call(transport, ~s({"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}))
+      {:ok, response} = Transport.request(transport, ~s({"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}))
 
       # Create a WebSocket transport
       {:ok, ws_transport} = Transport.new(:websocket, rpc_url: "wss://eth-mainnet.example.com")
@@ -63,7 +63,7 @@ defmodule Exth.Transport do
 
     1. `Transport.new/2` creates a transport struct with the appropriate adapter
     2. The adapter handles transport-specific initialization and configuration
-    3. `Transport.call/2` delegates requests to the adapter's `handle_request/2` callback
+    3. `Transport.request/2` delegates requests to the adapter's `handle_request/2` callback
     4. Each transport type implements the `Exth.Transport` behaviour
   """
 
