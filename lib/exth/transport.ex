@@ -67,14 +67,11 @@ defmodule Exth.Transport do
     4. Each transport type implements the `Exth.Transport` behaviour
   """
 
+  ###
+  ### Types
+  ###
+
   @type adapter_state :: term()
-
-  @type t :: %__MODULE__{
-          adapter: module(),
-          adapter_state: adapter_state()
-        }
-
-  defstruct [:adapter, :adapter_state]
 
   @transport_types [:custom, :http, :ipc, :websocket]
 
@@ -86,14 +83,32 @@ defmodule Exth.Transport do
 
   @type transport_options() :: keyword()
   @type options :: [supervisor: pid(), registry: pid()]
+  @type request_response :: :ok | {:ok, String.t()} | {:error, term()}
+
+  ###
+  ### Struct
+  ###
+
+  @type t :: %__MODULE__{
+          adapter: module(),
+          adapter_state: adapter_state()
+        }
+
+  defstruct [:adapter, :adapter_state]
+
+  ###
+  ### Behaviour callbacks
+  ###
 
   @callback init_transport(transport_options(), options()) ::
               {:ok, adapter_state()} | {:error, term()}
 
-  @type call_response :: :ok | {:ok, String.t()} | {:error, term()}
-
   @callback handle_request(transport_state :: adapter_state(), request :: String.t()) ::
-              call_response()
+              request_response()
+
+  ###
+  ### Macros
+  ###
 
   defmacro __using__(_opts) do
     quote location: :keep do
@@ -118,6 +133,10 @@ defmodule Exth.Transport do
     end
   end
 
+  ###
+  ### Public API
+  ###
+
   @spec new(transport_type(), transport_options()) :: {:ok, t()} | {:error, term()}
   def new(type, opts) when type in @transport_types do
     with adapter <- get_transport_module(type, opts),
@@ -131,8 +150,8 @@ defmodule Exth.Transport do
   defp get_transport_module(:ipc, _opts), do: __MODULE__.Ipc
   defp get_transport_module(:custom, opts), do: opts[:module]
 
-  @spec call(t(), String.t()) :: call_response()
-  def call(%__MODULE__{} = transport, request) do
+  @spec request(t(), String.t()) :: request_response()
+  def request(%__MODULE__{} = transport, request) do
     transport.adapter.handle_request(transport.adapter_state, request)
   end
 end
