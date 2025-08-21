@@ -101,8 +101,9 @@ Inline options take precedence over application config. Here are the available o
 
 ```elixir
 # Required options
-transport_type: :http | :custom  # Transport type to use
-rpc_url: "https://..."          # RPC endpoint URL
+transport_type: :http | :websocket | :ipc | :custom  # Transport type to use
+rpc_url: "https://..."          # RPC endpoint URL (for HTTP/WebSocket)
+path: "/tmp/ethereum.ipc"       # Socket path (for IPC)
 
 # Required inline option
 otp_app: :your_otp_app          # Application name for config lookup
@@ -110,9 +111,17 @@ otp_app: :your_otp_app          # Application name for config lookup
 # Custom transport options
 module: MyCustomTransport       # Required when transport_type is :custom
 
-# Optional http options
+# Optional HTTP options
 timeout: 30_000                 # Request timeout in milliseconds
 headers: [{"header", "value"}]  # Custom headers for HTTP transport
+adapter: Tesla.Adapter.Mint     # HTTP adapter (defaults to Mint)
+
+# Optional WebSocket options
+dispatch_callback: fn response -> handle_response(response) end  # Required for WebSocket
+
+# Optional IPC options
+pool_size: 10                   # Connection pool size
+socket_opts: [:binary, active: false, reuseaddr: true]  # Socket options
 ```
 
 ### RPC Client
@@ -168,8 +177,7 @@ protocols. Each transport type can be configured with specific options:
 
 ### HTTP Transport
 
-The default HTTP transport is built on Tesla, providing a robust HTTP client
-with middleware support:
+The HTTP transport provides robust HTTP/HTTPS communication with configurable middleware:
 
 ```elixir
 # Provider configuration
@@ -180,11 +188,11 @@ defmodule MyProvider do
     # Optional HTTP-specific configuration
     adapter: Tesla.Adapter.Mint, # Default HTTP adapter
     headers: [{"authorization", "Bearer token"}],
-    timeout: 30_000, # Request timeout in ms
+    timeout: 30_000 # Request timeout in ms
 end
 
 # Direct client configuration
-{:ok, client} = Exth.Rpc.new(
+{:ok, client} = Exth.Rpc.new_client(
   transport_type: :http,
   rpc_url: "https://eth-mainnet.example.com",
   adapter: Tesla.Adapter.Mint,
@@ -193,11 +201,11 @@ end
 )
 ```
 
-- ✨ **HTTP** (`:http`)
-
-  - Built on Tesla HTTP client
-  - Configurable adapters (Mint, Hackney, etc.)
-  - Configurable headers and timeouts
+**HTTP Features:**
+- Built on Tesla HTTP client with middleware support
+- Configurable adapters (Mint, Hackney, etc.)
+- Configurable headers and timeouts
+- Automatic URL validation and formatting
 
 ### WebSocket Transport
 
@@ -209,12 +217,14 @@ defmodule MyProvider do
   use Exth.Provider,
     transport_type: :websocket,
     rpc_url: "wss://eth-mainnet.example.com",
+    dispatch_callback: fn response -> handle_response(response) end
 end
 
 # Direct client configuration
-{:ok, client} = Exth.Rpc.new(
+{:ok, client} = Exth.Rpc.new_client(
   transport_type: :websocket,
   rpc_url: "wss://eth-mainnet.example.com",
+  dispatch_callback: fn response -> handle_response(response) end
 )
 
 # Example subscription
@@ -222,11 +232,12 @@ request = Rpc.request("eth_subscribe", ["newHeads"])
 {:ok, response} = Rpc.send(client, request)
 ```
 
-- 🌐 **WebSocket** (`:websocket`)
-  - Full-duplex communication
-  - Support for subscriptions
-  - Real-time updates
-  - Automatic connection management
+**WebSocket Features:**
+- Full-duplex communication
+- Support for subscriptions and real-time updates
+- Automatic connection management and lifecycle
+- Asynchronous message handling via dispatch callbacks
+- Connection state management and supervision
 
 ### IPC Transport
 
@@ -245,7 +256,7 @@ defmodule MyProvider do
 end
 
 # Direct client configuration
-{:ok, client} = Exth.Rpc.new(
+{:ok, client} = Exth.Rpc.new_client(
   transport_type: :ipc,
   path: "/tmp/ethereum.ipc",
   timeout: 30_000,
@@ -257,16 +268,16 @@ request = Rpc.request("eth_blockNumber", [])
 {:ok, response} = Rpc.send(client, request)
 ```
 
-- 🔌 **IPC** (`:ipc`)
-  - Unix domain socket communication
-  - Connection pooling with NimblePool
-  - Low latency for local nodes
-  - Efficient resource utilization
-  - **Note**: Only available on Unix-like systems
+**IPC Features:**
+- Unix domain socket communication
+- Connection pooling with NimblePool for efficient resource management
+- Low latency for local nodes
+- Automatic connection lifecycle management
+- **Note**: Only available on Unix-like systems
 
 **IPC Configuration Options:**
 - `:path` - (required) The Unix domain socket path (e.g., "/tmp/ethereum.ipc")
-- `:timeout` - Request timeout in milliseconds (default: 30000)
+- `:timeout` - Request timeout in milliseconds (default: 30,000ms)
 - `:socket_opts` - TCP socket options (default: [:binary, active: false, reuseaddr: true])
 - `:pool_size` - Number of connections in the pool (default: 10)
 - `:pool_lazy_workers` - Whether to create workers lazily (default: true)
@@ -276,21 +287,20 @@ request = Rpc.request("eth_blockNumber", [])
 ### Custom Transport
 
 Implement your own transport by creating a module and implementing the
-`Exth.Transport.Transportable` protocol:
+`Exth.Transport` behaviour:
 
 ```elixir
 defmodule MyCustomTransport do
-  # Transport struct should be whatever you need
-  defstruct [:config]
-end
+  use Exth.Transport
 
-defimpl Exth.Transport.Transportable, for: MyCustomTransport do
-  def new(transport, opts) do
-    # Initialize your transport configuration
-    %MyCustomTransport{config: opts}
+  @impl Exth.Transport
+  def init_transport(opts, _opts) do
+    # Initialize your transport
+    {:ok, transport_state}
   end
 
-  def call(transport, request) do
+  @impl Exth.Transport
+  def handle_request(transport_state, request) do
     # Handle the JSON-RPC request
     # Return {:ok, response} or {:error, reason}
   end
@@ -307,17 +317,17 @@ defmodule MyProvider do
 end
 
 # Direct client configuration
-{:ok, client} = Exth.Rpc.new_request(
+{:ok, client} = Exth.Rpc.new_client(
   transport_type: :custom,
-  rpc_url: "https://eth-mainnet.example.com",
   module: MyCustomTransport,
   custom_option: "value"
 )
 ```
 
-- 🔧 **Custom** (`:custom`)
-  - Full control over transport implementation
-  - Custom state management
+**Custom Transport Features:**
+- Full control over transport implementation
+- Custom state management
+- Behaviour-based implementation for consistency
 
 <!-- tabs-close -->
 
