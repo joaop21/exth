@@ -17,7 +17,7 @@ defmodule Exth.TransportTest do
     end
 
     test "creates a custom transport with valid options" do
-      assert {:ok, %Transport{adapter: Exth.TestTransport}} =
+      assert {:ok, %Transport{adapter: TestTransport}} =
                Transport.new(:custom, valid_custom_transport_opts())
     end
 

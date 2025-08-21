@@ -1,11 +1,15 @@
 defmodule Exth.AsyncTestTransport do
   @moduledoc false
 
+  use Exth.Transport
+
   defstruct [:config]
 
-  defimpl Exth.Transport.Transportable do
-    def new(_transport, opts \\ []), do: %Exth.AsyncTestTransport{config: opts}
-
-    def call(_transport, _encoded_request), do: :ok
+  @impl Exth.Transport
+  def init_transport(opts, _opts) do
+    {:ok, %Exth.AsyncTestTransport{config: opts}}
   end
+
+  @impl Exth.Transport
+  def handle_request(_transport, _request), do: :ok
 end

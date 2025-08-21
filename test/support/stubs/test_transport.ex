@@ -13,6 +13,8 @@ defmodule Exth.TestTransport do
     "net_version" => "1"
   }
 
+  def get_known_methods, do: @known_methods
+
   @impl Exth.Transport
   def init_transport(opts, _opts) do
     {:ok, %__MODULE__{config: opts}}
@@ -37,6 +39,4 @@ defmodule Exth.TestTransport do
     |> Enum.map_join(",", fn {:ok, response} -> response end)
     |> then(fn response -> {:ok, "[#{response}]"} end)
   end
-
-  defp get_known_methods, do: @known_methods
 end
