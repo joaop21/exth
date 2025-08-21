@@ -139,16 +139,26 @@ defmodule Exth.Transport do
 
   @spec new(transport_type(), transport_options()) :: {:ok, t()} | {:error, term()}
   def new(type, opts) when type in @transport_types do
-    with adapter <- get_transport_module(type, opts),
+    with {:ok, adapter} <- fetch_transport_module(type, opts),
          {:ok, adapter_state} <- adapter.init_transport(opts, []) do
       {:ok, %__MODULE__{adapter: adapter, adapter_state: adapter_state}}
     end
   end
 
-  defp get_transport_module(:http, _opts), do: __MODULE__.Http
-  defp get_transport_module(:websocket, _opts), do: __MODULE__.Websocket
-  defp get_transport_module(:ipc, _opts), do: __MODULE__.Ipc
-  defp get_transport_module(:custom, opts), do: opts[:module]
+  def new(type, _opts) do
+    {:error, "Invalid transport type: #{inspect(type)}"}
+  end
+
+  defp fetch_transport_module(:http, _opts), do: {:ok, __MODULE__.Http}
+  defp fetch_transport_module(:websocket, _opts), do: {:ok, __MODULE__.Websocket}
+  defp fetch_transport_module(:ipc, _opts), do: {:ok, __MODULE__.Ipc}
+
+  defp fetch_transport_module(:custom, opts) do
+    case Keyword.fetch(opts, :module) do
+      {:ok, module} -> {:ok, module}
+      :error -> {:error, "Missing required option :module"}
+    end
+  end
 
   @spec request(t(), String.t()) :: request_response()
   def request(%__MODULE__{} = transport, request) do

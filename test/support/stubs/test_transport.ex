@@ -1,6 +1,8 @@
 defmodule Exth.TestTransport do
   @moduledoc false
 
+  use Exth.Transport
+
   defstruct [:config]
 
   @known_methods %{
@@ -11,19 +13,19 @@ defmodule Exth.TestTransport do
     "net_version" => "1"
   }
 
-  def get_known_methods, do: @known_methods
-end
+  @impl Exth.Transport
+  def init_transport(opts, _opts) do
+    {:ok, %__MODULE__{config: opts}}
+  end
 
-defimpl Exth.Transport.Transportable, for: Exth.TestTransport do
-  def new(_transport, opts), do: %Exth.TestTransport{config: opts}
-
-  def call(transport, encoded_request) do
-    decoded_request = JSON.decode!(encoded_request)
+  @impl Exth.Transport
+  def handle_request(transport, request) do
+    decoded_request = JSON.decode!(request)
     do_call(transport, decoded_request)
   end
 
   defp do_call(_transport, %{"method" => method, "id" => id} = _request) do
-    case Map.get(Exth.TestTransport.get_known_methods(), method) do
+    case Map.get(get_known_methods(), method) do
       nil -> {:ok, JSON.encode!(%{id: id, error: %{code: -32_601, message: "Method not found"}})}
       result -> {:ok, JSON.encode!(%{id: id, result: result})}
     end
@@ -35,4 +37,6 @@ defimpl Exth.Transport.Transportable, for: Exth.TestTransport do
     |> Enum.map_join(",", fn {:ok, response} -> response end)
     |> then(fn response -> {:ok, "[#{response}]"} end)
   end
+
+  defp get_known_methods, do: @known_methods
 end
