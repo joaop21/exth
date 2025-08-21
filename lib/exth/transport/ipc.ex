@@ -59,6 +59,8 @@ defmodule Exth.Transport.Ipc do
   See `Exth.Transport.Transportable` for protocol details.
   """
 
+  use Exth.Transport
+
   alias __MODULE__.ConnectionPool
 
   @typedoc "IPC transport configuration"
@@ -74,42 +76,38 @@ defmodule Exth.Transport.Ipc do
   @default_timeout 30_000
   @default_socket_opts [:binary, active: false, reuseaddr: true]
 
-  @spec new(keyword()) :: t()
-  def new(opts) do
-    with {:ok, path} <- validate_required_path(opts[:path]) do
-      timeout = opts[:timeout] || @default_timeout
-      socket_opts = opts[:socket_opts] || @default_socket_opts
+  @impl true
+  def init_transport(transport_opts, _opts) do
+    with {:ok, path} <- validate_required_path(transport_opts[:path]) do
+      timeout = transport_opts[:timeout] || @default_timeout
+      socket_opts = transport_opts[:socket_opts] || @default_socket_opts
 
-      {:ok, pool} = ConnectionPool.start(opts ++ [socket_opts: socket_opts])
+      {:ok, pool} = ConnectionPool.start(transport_opts ++ [socket_opts: socket_opts])
 
-      %__MODULE__{
-        path: path,
-        pool: pool,
-        socket_opts: socket_opts,
-        timeout: timeout
-      }
+      {:ok,
+       %__MODULE__{
+         path: path,
+         pool: pool,
+         socket_opts: socket_opts,
+         timeout: timeout
+       }}
     end
   end
 
-  @spec call(t(), String.t()) :: {:ok, String.t()} | {:error, term()}
-  def call(%__MODULE__{} = transport, request) do
+  @impl true
+  def handle_request(%__MODULE__{} = transport, request) do
     ConnectionPool.call(transport.pool, request, transport.timeout)
   end
 
   # Private functions
 
   defp validate_required_path(nil) do
-    raise ArgumentError, "IPC socket path is required but was not provided"
+    {:error, "IPC socket path is required but was not provided"}
   end
 
   defp validate_required_path(path) when not is_binary(path) do
-    raise ArgumentError, "Invalid IPC socket path: expected string, got: #{inspect(path)}"
+    {:error, "Invalid IPC socket path: expected string, got: #{inspect(path)}"}
   end
 
   defp validate_required_path(path), do: {:ok, path}
-end
-
-defimpl Exth.Transport.Transportable, for: Exth.Transport.Ipc do
-  def new(_transport, opts), do: Exth.Transport.Ipc.new(opts)
-  def call(transport, request), do: Exth.Transport.Ipc.call(transport, request)
 end
