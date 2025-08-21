@@ -119,7 +119,7 @@ defmodule Exth.Rpc.Client do
             end
           )
 
-        transport = Transport.new(type, opts)
+        {:ok, transport} = Transport.new(type, opts)
 
         %__MODULE__{
           counter: :atomics.new(1, signed: false),
@@ -128,7 +128,7 @@ defmodule Exth.Rpc.Client do
         }
 
       _ ->
-        transport = Transport.new(type, opts)
+        {:ok, transport} = Transport.new(type, opts)
 
         %__MODULE__{
           counter: :atomics.new(1, signed: false),
@@ -150,7 +150,7 @@ defmodule Exth.Rpc.Client do
   end
 
   @type send_argument_type :: t() | Call.t() | Request.t() | [Request.t()] | []
-  @type send_response_type :: Transport.call_response() | {:error, :duplicate_ids}
+  @type send_response_type :: Transport.request_response() | {:error, :duplicate_ids}
 
   @spec send(Call.t()) :: send_response_type()
   def send(%Call{} = call) do
@@ -196,7 +196,7 @@ defmodule Exth.Rpc.Client do
     with :ok <- validate_unique_ids(requests),
          requests <- assign_missing_ids(client, requests),
          {:ok, encoded_requests} <- Request.serialize(requests),
-         {:ok, encoded_response} <- Transport.call(client.transport, encoded_requests) do
+         {:ok, encoded_response} <- Transport.request(client.transport, encoded_requests) do
       Response.deserialize(encoded_response)
     end
   end
