@@ -4,12 +4,22 @@ defmodule Exth.Transport.IpcTest do
 
   alias Exth.Transport.Ipc
 
-  describe "new/1" do
-    test "creates a new IPC transport with valid path" do
+  describe "init_transport/2 - transport initialization" do
+    setup do
+      %{
+        transport_opts: [path: "/tmp/test.sock"],
+        opts: []
+      }
+    end
+
+    test "creates a new IPC transport with valid path", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
       pool = %Ipc.ConnectionPool{name: "pool_name"}
       expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, pool} end)
 
-      transport = Ipc.new(path: "/tmp/test.sock")
+      {:ok, transport} = Ipc.init_transport(transport_opts, opts)
 
       assert %Ipc{
                path: "/tmp/test.sock",
@@ -19,16 +29,17 @@ defmodule Exth.Transport.IpcTest do
              } = transport
     end
 
-    test "creates a new IPC transport with custom options" do
+    test "creates a new IPC transport with custom options", %{opts: opts} do
       pool = %Ipc.ConnectionPool{name: "pool_name"}
       expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, pool} end)
 
-      transport =
-        Ipc.new(
-          path: "/tmp/custom.sock",
-          timeout: 15_000,
-          socket_opts: [:binary, active: false]
-        )
+      transport_opts = [
+        path: "/tmp/custom.sock",
+        timeout: 15_000,
+        socket_opts: [:binary, active: false]
+      ]
+
+      {:ok, transport} = Ipc.init_transport(transport_opts, opts)
 
       assert %Ipc{
                path: "/tmp/custom.sock",
@@ -38,35 +49,39 @@ defmodule Exth.Transport.IpcTest do
              } = transport
     end
 
-    test "raises error when path is not provided" do
-      assert_raise ArgumentError, "IPC socket path is required but was not provided", fn ->
-        Ipc.new([])
-      end
+    test "raises error when path is not provided", %{transport_opts: transport_opts, opts: opts} do
+      transport_opts = Keyword.delete(transport_opts, :path)
+
+      assert {:error, "IPC socket path is required but was not provided"} =
+               Ipc.init_transport(transport_opts, opts)
     end
 
-    test "raises error when path is not a string" do
-      assert_raise ArgumentError, "Invalid IPC socket path: expected string, got: 123", fn ->
-        Ipc.new(path: 123)
-      end
+    test "raises error when path is not a string", %{transport_opts: transport_opts, opts: opts} do
+      transport_opts = Keyword.put(transport_opts, :path, 123)
+
+      assert {:error, "Invalid IPC socket path: expected string, got: 123"} =
+               Ipc.init_transport(transport_opts, opts)
     end
   end
 
-  describe "call/2" do
+  describe "handle_request/2" do
     setup do
       path = "/tmp/test.sock"
       pool = %Ipc.ConnectionPool{name: "pool_name"}
       expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, pool} end)
 
-      {:ok, transport: Ipc.new(path: path), pool: pool}
+      {:ok, transport} = Ipc.init_transport([path: path], [])
+
+      {:ok, transport: transport, pool: pool}
     end
 
     test "sends request through socket", %{transport: transport, pool: pool} do
-      request = Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: []})
-      response = Jason.encode!(%{jsonrpc: "2.0", id: 1, result: "0x1"})
+      request = ~s({jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: []})
+      response = ~s({jsonrpc: "2.0", id: 1, result: "0x1"})
 
       expect(Ipc.ConnectionPool, :call, fn ^pool, ^request, 30_000 -> {:ok, response} end)
 
-      result = Ipc.call(transport, request)
+      result = Ipc.handle_request(transport, request)
 
       assert {:ok, ^response} = result
     end
@@ -75,13 +90,13 @@ defmodule Exth.Transport.IpcTest do
       transport: transport,
       pool: pool
     } do
-      request = Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: []})
+      request = ~s({jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: []})
 
       expect(Ipc.ConnectionPool, :call, fn ^pool, ^request, 30_000 ->
         {:error, {:socket_error, :bad_data}}
       end)
 
-      result = Ipc.call(transport, request)
+      result = Ipc.handle_request(transport, request)
 
       assert {:error, {:socket_error, :bad_data}} = result
     end
