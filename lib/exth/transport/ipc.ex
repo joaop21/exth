@@ -1,62 +1,52 @@
 defmodule Exth.Transport.Ipc do
   @moduledoc """
-  IPC (Inter-Process Communication) transport implementation for JSON-RPC requests using Unix domain sockets.
+  IPC (Inter-Process Communication) transport implementation for JSON-RPC communication with EVM nodes.
 
-  Implements the `Exth.Transport.Transportable` protocol for making IPC connections to JSON-RPC
-  endpoints via Unix domain sockets. Uses NimblePool for connection pooling and efficient
-  resource management.
+  This module provides IPC transport capabilities using Unix domain sockets, enabling local
+  communication with Ethereum nodes running on the same machine.
 
   ## Features
 
     * Unix domain socket communication
-    * Connection pooling with NimblePool
-    * Automatic connection management
+    * Connection pooling with NimblePool for efficient resource management
+    * Automatic connection lifecycle management
     * Configurable pool size and timeouts
-    * Efficient resource utilization
     * Process registration with via-tuples
+    * Optimized for local node connections
 
-  ## Usage
+  ## Configuration Options
 
-      transport = Transportable.new(
-        %Exth.Transport.Ipc{},
-        path: "/tmp/ethereum.ipc"
+    * `:path` - Required Unix domain socket path (e.g., "/tmp/ethereum.ipc")
+    * `:timeout` - Request timeout in milliseconds (default: 30,000ms)
+    * `:socket_opts` - TCP socket options (default: [:binary, active: false, reuseaddr: true])
+    * `:pool_size` - Number of connections in the pool (default: 10)
+    * `:pool_lazy_workers` - Whether to create workers lazily (default: true)
+    * `:pool_worker_idle_timeout` - Worker idle timeout (default: nil)
+    * `:pool_max_idle_pings` - Maximum idle pings before worker termination (default: -1)
+
+  ## Example Usage
+
+      # Create IPC transport
+      {:ok, transport} = Transport.new(:ipc,
+        path: "/tmp/ethereum.ipc",
+        timeout: 15_000,
+        pool_size: 5
       )
 
-      {:ok, response} = Transportable.call(transport, request)
-
-  ## Configuration
-
-  Required options:
-    * `:path` - The Unix domain socket path (e.g., "/tmp/ethereum.ipc")
-
-  Optional options:
-    * `:timeout` - Request timeout in milliseconds (defaults to 30000)
-    * `:socket_opts` - TCP socket options (defaults to [:binary, active: false, reuseaddr: true])
-    * `:pool_size` - Number of connections in the pool (defaults to 10)
-    * `:pool_lazy_workers` - Whether to create workers lazily (defaults to true)
-    * `:pool_worker_idle_timeout` - Worker idle timeout (defaults to nil)
-    * `:pool_max_idle_pings` - Maximum idle pings before worker termination (defaults to -1)
+      # Make IPC request
+      {:ok, response} = Transport.request(transport, json_request)
 
   ## Connection Pooling
 
-  The IPC transport uses NimblePool to manage a pool of Unix domain socket connections.
-  This provides several benefits:
+  The IPC transport uses NimblePool to manage a pool of Unix domain socket connections,
+  providing efficient resource utilization and automatic connection lifecycle management.
 
-    * Efficient resource utilization
-    * Automatic connection lifecycle management
-    * Configurable pool size for different workloads
-    * Connection reuse for better performance
+  ## Best Practices
 
-  ## Error Handling
-
-  The transport handles several error cases:
-    * Invalid socket path format
-    * Missing required options
-    * Connection failures
-    * Socket communication errors
-    * Pool exhaustion
-
-  See `Exth.Transport.Transportable` for protocol details.
+    * Ensure the socket path exists and is accessible
+    * Configure appropriate pool size for your workload
+    * Monitor connection pool health
+    * Use appropriate timeouts for your use case
   """
 
   use Exth.Transport

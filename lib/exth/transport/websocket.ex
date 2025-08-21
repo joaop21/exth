@@ -1,60 +1,50 @@
 defmodule Exth.Transport.Websocket do
   @moduledoc """
-  WebSocket transport implementation for JSON-RPC requests using Fresh.
+  WebSocket transport implementation for JSON-RPC communication with EVM nodes.
 
-  Implements the `Exth.Transport.Transportable` protocol for making WebSocket
-  connections to JSON-RPC endpoints. Uses Fresh as the WebSocket client library.
+  This module provides WebSocket transport capabilities using the Fresh WebSocket client
+  library, enabling real-time communication and subscription support for JSON-RPC endpoints.
 
   ## Features
 
-    * Full-duplex communication
-    * Automatic connection management
-    * Asynchronous message handling
+    * Full-duplex WebSocket communication
     * Support for both ws:// and wss:// protocols
-    * Configurable dispatch callbacks
-    * Connection state management
+    * Automatic connection management and lifecycle
+    * Asynchronous message handling via dispatch callbacks
+    * Connection state management and supervision
+    * Real-time subscription support
 
-  ## Usage
+  ## Configuration Options
 
-      transport = Transportable.new(
-        %Exth.Transport.Websocket{},
-        rpc_url: "wss://mainnet.infura.io/ws/v3/YOUR-PROJECT-ID",
+    * `:rpc_url` - Required WebSocket endpoint URL (must start with ws:// or wss://)
+    * `:dispatch_callback` - Required function to handle incoming messages (arity 1)
+    * `:timeout` - Connection timeout in milliseconds (default: 30,000ms)
+
+  ## Example Usage
+
+      # Create WebSocket transport
+      {:ok, transport} = Transport.new(:websocket,
+        rpc_url: "wss://eth-mainnet.example.com",
         dispatch_callback: fn response -> handle_response(response) end
       )
 
-      {:ok, response} = Transportable.call(transport, request)
-
-  ## Configuration
-
-  Required options:
-    * `:rpc_url` - The WebSocket endpoint URL (must start with ws:// or wss://)
-    * `:dispatch_callback` - Function to handle incoming messages (arity 1)
+      # Make WebSocket request
+      {:ok, response} = Transport.request(transport, json_request)
 
   ## Message Flow
 
   1. Transport is initialized with a dispatch callback
-  2. WebSocket connection is established
-  3. Outgoing messages are sent through `call/2`
+  2. WebSocket connection is established via dynamic supervisor
+  3. Outgoing messages are sent through `Transport.request/2`
   4. Incoming messages are handled by the dispatch callback
   5. Connection is maintained for subsequent requests
-
-  ## Error Handling
-
-  The transport handles several error cases:
-    * Invalid URL format
-    * Missing required options
-    * Connection failures
-    * Message dispatch errors
 
   ## Best Practices
 
     * Use wss:// for production environments
     * Implement proper error handling in dispatch callbacks
-    * Monitor connection health
-    * Handle reconnection scenarios
+    * Monitor connection health and implement reconnection logic
     * Clean up resources when done
-
-  See `Exth.Transport.Transportable` for protocol details.
   """
 
   use Fresh

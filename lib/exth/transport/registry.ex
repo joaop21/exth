@@ -1,5 +1,10 @@
 defmodule Exth.Transport.Registry do
-  @moduledoc false
+  @moduledoc """
+  Registry for transport-related processes.
+
+  This module provides a centralized registry for managing transport connections and processes,
+  enabling efficient lookup and management of transport resources across the system.
+  """
 
   @spec start_link() :: {:ok, pid()} | {:error, term()}
   def start_link do
