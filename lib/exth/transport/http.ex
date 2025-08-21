@@ -96,11 +96,11 @@ defmodule Exth.Transport.Http do
 
   defp validate_url_format(url) do
     case URI.parse(url) do
-      %URI{scheme: scheme, host: _host} when scheme not in ["http", "https"] ->
+      %URI{scheme: scheme} when scheme not in ["http", "https"] ->
         {:error,
          "Invalid RPC URL format: #{inspect(url)}. The URL must start with http:// or https://"}
 
-      %URI{scheme: _scheme, host: ""} ->
+      %URI{host: ""} ->
         {:error, "Invalid RPC URL format: #{inspect(url)}. The URL must contain a valid host"}
 
       %URI{scheme: scheme, host: host} when scheme in ["http", "https"] and not is_nil(host) ->

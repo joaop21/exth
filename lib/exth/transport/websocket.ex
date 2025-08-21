@@ -58,6 +58,7 @@ defmodule Exth.Transport.Websocket do
   """
 
   use Fresh
+  use Exth.Transport
 
   alias Exth.Transport
 
@@ -78,11 +79,12 @@ defmodule Exth.Transport.Websocket do
     defstruct [:dispatch_callback]
   end
 
-  @spec new(keyword()) :: t()
-  def new(opts) do
-    with {:ok, rpc_url} <- validate_required_url(opts[:rpc_url]),
+  @impl Exth.Transport
+  def init_transport(transport_opts, _opts) do
+    with {:ok, rpc_url} <- validate_required_url(transport_opts[:rpc_url]),
          :ok <- validate_url_format(rpc_url),
-         {:ok, dispatch_callback} <- validate_required_dispatch_callback(opts[:dispatch_callback]) do
+         {:ok, dispatch_callback} <-
+           validate_required_dispatch_callback(transport_opts[:dispatch_callback]) do
       name = via_tuple(rpc_url)
 
       child_spec = {
@@ -97,18 +99,18 @@ defmodule Exth.Transport.Websocket do
       # Fresh should be able to handle this, but it doesn't (yet)
       Process.sleep(1_000)
 
-      %__MODULE__{dispatch_callback: dispatch_callback, name: name}
+      {:ok, %__MODULE__{dispatch_callback: dispatch_callback, name: name}}
     end
   end
 
-  @spec call(t(), String.t()) :: :ok
-  def call(%__MODULE__{name: name}, encoded_request) do
-    Fresh.send(name, {:text, encoded_request})
+  @impl Exth.Transport
+  def handle_request(%__MODULE__{name: name}, request) do
+    Fresh.send(name, {:text, request})
   end
 
   # Fresh callbacks
 
-  @impl true
+  @impl Fresh
   def handle_in({:text, encoded_response}, %State{} = state) do
     state.dispatch_callback.(encoded_response)
     {:ok, state}
@@ -117,38 +119,40 @@ defmodule Exth.Transport.Websocket do
   # Private functions
 
   defp validate_required_url(nil) do
-    raise ArgumentError, "RPC URL is required but was not provided"
+    {:error, "RPC URL is required but was not provided"}
   end
 
   defp validate_required_url(url) when not is_binary(url) do
-    raise ArgumentError, "Invalid RPC URL: expected string, got: #{inspect(url)}"
+    {:error, "Invalid RPC URL: expected string, got: #{inspect(url)}"}
   end
 
   defp validate_required_url(url), do: {:ok, url}
 
   defp validate_url_format(url) do
     case URI.parse(url) do
+      %URI{scheme: scheme} when scheme not in ["ws", "wss"] ->
+        {:error,
+         "Invalid RPC URL format: #{inspect(url)}. The URL must start with ws:// or wss://"}
+
+      %URI{host: ""} ->
+        {:error, "Invalid RPC URL format: #{inspect(url)}. The URL must contain a valid host"}
+
       %URI{scheme: scheme, host: host} when scheme in ["ws", "wss"] and not is_nil(host) ->
         :ok
 
       _ ->
-        raise ArgumentError, """
-        Invalid RPC URL format: #{inspect(url)}
-        The URL must:
-          - Start with ws:// or wss://
-          - Contain a valid host
-        """
+        {:error, "Invalid RPC URL format: #{inspect(url)}"}
     end
   end
 
   defp validate_required_dispatch_callback(nil) do
-    raise ArgumentError, "Dispatcher callback function is required but was not provided"
+    {:error, "Dispatcher callback function is required but was not provided"}
   end
 
   defp validate_required_dispatch_callback(dispatch_callback)
        when not is_function(dispatch_callback, 1) do
-    raise ArgumentError,
-          "Invalid dispatch_callback function: expected function with arity 1, got: #{inspect(dispatch_callback)}"
+    {:error,
+     "Invalid dispatch_callback function: expected function with arity 1, got: #{inspect(dispatch_callback)}"}
   end
 
   defp validate_required_dispatch_callback(dispatch_callback), do: {:ok, dispatch_callback}
@@ -156,9 +160,4 @@ defmodule Exth.Transport.Websocket do
   defp via_tuple(rpc_url) do
     Transport.Registry.via_tuple({__MODULE__, rpc_url})
   end
-end
-
-defimpl Exth.Transport.Transportable, for: Exth.Transport.Websocket do
-  def new(_transport, opts), do: Exth.Transport.Websocket.new(opts)
-  def call(transport, request), do: Exth.Transport.Websocket.call(transport, request)
 end
