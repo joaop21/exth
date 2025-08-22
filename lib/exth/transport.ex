@@ -149,14 +149,13 @@ defmodule Exth.Transport do
     {:error, "Invalid transport type: #{inspect(type)}"}
   end
 
-  defp fetch_transport_module(:http, _opts), do: {:ok, __MODULE__.Http}
-  defp fetch_transport_module(:websocket, _opts), do: {:ok, __MODULE__.Websocket}
-  defp fetch_transport_module(:ipc, _opts), do: {:ok, __MODULE__.Ipc}
-
-  defp fetch_transport_module(:custom, opts) do
-    case Keyword.fetch(opts, :module) do
-      {:ok, module} -> {:ok, module}
-      :error -> {:error, "Missing required option :module"}
+  defp fetch_transport_module(type, opts) do
+    case {type, Keyword.get(opts, :module)} do
+      {:http, nil} -> {:ok, __MODULE__.Http}
+      {:ipc, nil} -> {:ok, __MODULE__.Ipc}
+      {:websocket, nil} -> {:ok, __MODULE__.Websocket}
+      {_, module} when not is_nil(module) -> {:ok, module}
+      _ -> {:error, "Invalid transport type: #{inspect(type)}"}
     end
   end
 

@@ -22,7 +22,7 @@ defmodule Exth.TransportTest do
     end
 
     test "validates custom transport requirements" do
-      assert {:error, "Missing required option :module"} =
+      assert {:error, "Invalid transport type: :custom"} =
                Transport.new(:custom, valid_transport_opts())
     end
 
