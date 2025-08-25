@@ -1,45 +1,39 @@
 defmodule Exth.Transport do
   @moduledoc """
-  Core transport abstraction for JSON-RPC communication with EVM-compatible blockchain nodes.
+  Unified transport interface for JSON-RPC communication.
 
-  This module provides a unified interface for different transport mechanisms (HTTP, WebSocket, IPC)
-  and custom implementations, allowing seamless switching between transport layers while maintaining
-  consistent behavior.
-
-  ## Features
-
-    * Multiple transport types: HTTP, WebSocket, IPC, and custom implementations
-    * Unified transport interface with adapter pattern
-    * Automatic transport initialization and lifecycle management
-    * Consistent request/response handling across all transport types
-    * Behaviour-based implementation for custom transports
+  Supports HTTP, WebSocket, IPC, and custom transport implementations through a common API.
 
   ## Transport Types
 
-  The module supports the following built-in transport types:
-
-    * `:http` - Standard HTTP/HTTPS transport for RESTful JSON-RPC calls
-    * `:websocket` - WebSocket transport for real-time communication and subscriptions
-    * `:ipc` - Inter-Process Communication transport for local node connections
-    * `:custom` - Custom transport implementations for specialized use cases
+    * `:http` - HTTP/HTTPS transport
+    * `:websocket` - WebSocket transport (requires dispatch_callback)
+    * `:ipc` - Unix domain socket transport
+    * `:custom` - Custom transport implementations
 
   ## Quick Start
 
-      # Create an HTTP transport
-      {:ok, transport} = Transport.new(:http, rpc_url: "https://eth-mainnet.example.com")
+      # HTTP transport
+      {:ok, transport} = Transport.new(:http, rpc_url: "https://api.example.com")
+      {:ok, response} = Transport.request(transport, encoded_request)
 
-      # Make a request
-      {:ok, response} = Transport.request(transport, ~s({"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}))
+      # WebSocket transport
+      {:ok, ws_transport} = Transport.new(:websocket,
+        rpc_url: "wss://api.example.com",
+        dispatch_callback: fn response -> handle_response(response) end
+      )
 
-      # Create a WebSocket transport
-      {:ok, ws_transport} = Transport.new(:websocket, rpc_url: "wss://eth-mainnet.example.com")
-
-      # Create a custom transport
+      # Custom transport
       {:ok, custom_transport} = Transport.new(:custom, module: MyCustomTransport)
 
-  ## Custom Transport Implementation
+  ## Request Format
 
-  To implement a custom transport, use the `__using__` macro:
+  > #### Important {: .warning}
+  >
+  > The `request` parameter in `Transport.request/2` must already be encoded as a string.
+  > Do not pass raw data structures - encode them first using the required encoding method.
+
+  ## Custom Transport Implementation
 
       defmodule MyCustomTransport do
         use Exth.Transport
@@ -51,20 +45,17 @@ defmodule Exth.Transport do
         end
 
         @impl Exth.Transport
-        def handle_request(transport, request) do
-          # Handle the JSON-RPC request
+        def handle_request(transport_state, request) do
+          # Handle the encoded request
           {:ok, response}
         end
       end
 
-  ## Architecture
+  ## Return Types
 
-  The Transport module uses an adapter pattern where:
-
-    1. `Transport.new/2` creates a transport struct with the appropriate adapter
-    2. The adapter handles transport-specific initialization and configuration
-    3. `Transport.request/2` delegates requests to the adapter's `handle_request/2` callback
-    4. Each transport type implements the `Exth.Transport` behaviour
+    * `{:ok, response}` - Successful request with response
+    * `{:error, reason}` - Request failed
+    * `:ok` - For transports that don't return responses (e.g., WebSocket)
   """
 
   ###
@@ -135,6 +126,43 @@ defmodule Exth.Transport do
   ### Public API
   ###
 
+  @doc """
+  Creates a new transport with the specified type and options.
+
+  ## Parameters
+
+    * `type` - Transport type (`:http`, `:websocket`, `:ipc`, or `:custom`)
+    * `opts` - Transport-specific configuration options
+
+  ## Returns
+
+    * `{:ok, transport}` - Successfully created transport
+    * `{:error, reason}` - Failed to create transport
+
+  ## Examples
+
+      # HTTP transport
+      {:ok, transport} = Transport.new(:http, rpc_url: "https://api.example.com")
+
+      # WebSocket transport
+      {:ok, ws_transport} = Transport.new(:websocket,
+        rpc_url: "wss://api.example.com",
+        dispatch_callback: fn response -> handle_response(response) end
+      )
+
+      # IPC transport
+      {:ok, ipc_transport} = Transport.new(:ipc, path: "/tmp/ethereum.ipc")
+
+      # Custom transport
+      {:ok, custom_transport} = Transport.new(:custom, module: MyCustomTransport)
+
+  ## Transport-Specific Options
+
+    * **HTTP**: `rpc_url`, `timeout`, `headers`, `adapter`
+    * **WebSocket**: `rpc_url`, `dispatch_callback`
+    * **IPC**: `path`, `timeout`, `pool_size`, `socket_opts`
+    * **Custom**: `module` (required)
+  """
   @spec new(type(), transport_options()) :: {:ok, t()} | {:error, term()}
   def new(type, opts) when type in @transport_types do
     with {:ok, adapter} <- fetch_transport_module(type, opts),
@@ -157,6 +185,36 @@ defmodule Exth.Transport do
     end
   end
 
+  @doc """
+  Makes a request using the configured transport.
+
+  ## Parameters
+
+    * `transport` - The configured transport instance
+    * `request` - **Pre-encoded string** (encode your data structures first)
+
+  ## Returns
+
+    * `{:ok, response}` - Successful request with encoded response string
+    * `{:error, reason}` - Request failed
+    * `:ok` - For transports that don't return responses (e.g., WebSocket)
+
+  ## Example
+
+      # Encode your request data first
+      request_data = %{
+        "jsonrpc" => "2.0",
+        "method" => "eth_blockNumber", 
+        "params" => [],
+        "id" => 1
+      }
+      
+      encoded_request = encode_request(request_data)
+      {:ok, encoded_response} = Transport.request(transport, encoded_request)
+      
+      # Decode the response
+      response_data = decode_response(encoded_response)
+  """
   @spec request(t(), String.t()) :: request_response()
   def request(%__MODULE__{} = transport, request) do
     transport.adapter.handle_request(transport.adapter_config, request)
