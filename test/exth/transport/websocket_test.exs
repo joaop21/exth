@@ -9,24 +9,27 @@ defmodule Exth.Transport.WebsocketTest do
 
   setup :verify_on_exit!
 
-  describe "new/1 - transport initialization" do
+  describe "init_transport/2 - transport initialization" do
     setup do
-      {:ok, base_opts: [rpc_url: @valid_ws_url, dispatch_callback: fn arg -> arg end]}
+      %{
+        transport_opts: [rpc_url: @valid_ws_url, dispatch_callback: fn arg -> arg end],
+        opts: []
+      }
     end
 
-    test "creates transport with valid options", %{base_opts: base_opts} do
+    test "creates transport with valid options", %{transport_opts: transport_opts, opts: opts} do
       expect(Websocket.DynamicSupervisor, :start_websocket, fn _ws_spec -> {:ok, self()} end)
-      opts = Keyword.put(base_opts, :rpc_url, @valid_ws_url)
-      assert %Websocket{} = Websocket.new(opts)
+      assert {:ok, %Websocket{}} = Websocket.init_transport(transport_opts, opts)
     end
 
-    test "validates required RPC URL" do
-      assert_raise ArgumentError, ~r/RPC URL is required/, fn ->
-        Websocket.new([])
-      end
+    test "validates required RPC URL", %{transport_opts: transport_opts, opts: opts} do
+      transport_opts = Keyword.delete(transport_opts, :rpc_url)
+
+      assert {:error, "RPC URL is required but was not provided"} =
+               Websocket.init_transport(transport_opts, opts)
     end
 
-    test "raises when RPC URL is not a string" do
+    test "raises when RPC URL is not a string", %{transport_opts: transport_opts, opts: opts} do
       invalid_urls = [
         123,
         %{},
@@ -36,80 +39,94 @@ defmodule Exth.Transport.WebsocketTest do
       ]
 
       for url <- invalid_urls do
-        assert_raise ArgumentError, ~r/Invalid RPC URL: expected string, got:/, fn ->
-          Websocket.new(rpc_url: url)
-        end
+        transport_opts = Keyword.put(transport_opts, :rpc_url, url)
+
+        assert {:error, reason} =
+                 Websocket.init_transport(transport_opts, opts)
+
+        assert reason =~ "Invalid RPC URL: expected string, got:"
       end
     end
 
-    test "raises when RPC URL has an invalid format" do
-      invalid_urls = [
-        "not-a-url",
-        "ftp://example.com",
-        "http://invalid",
-        "https://invalid"
-      ]
+    test "returns error when RPC URL has an invalid scheme", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
+      transport_opts = Keyword.put(transport_opts, :rpc_url, "ftp://example.com")
 
-      for url <- invalid_urls do
-        assert_raise ArgumentError, ~r/Invalid RPC URL format/, fn ->
-          Websocket.new(rpc_url: url)
-        end
-      end
+      assert {:error,
+              "Invalid RPC URL format: \"ftp://example.com\". The URL must start with ws:// or wss://"} =
+               Websocket.init_transport(transport_opts, opts)
     end
 
-    test "raises when no dispatch callback is provided", %{base_opts: base_opts} do
-      assert_raise ArgumentError, ~r/Dispatcher callback function is required/, fn ->
-        Websocket.new(base_opts |> Keyword.delete(:dispatch_callback))
-      end
+    test "returns error when RPC URL has no host", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
+      transport_opts = Keyword.put(transport_opts, :rpc_url, "wss://")
+
+      assert {:error, "Invalid RPC URL format: \"wss://\". The URL must contain a valid host"} =
+               Websocket.init_transport(transport_opts, opts)
     end
 
-    test "raises when dispatch_callback is not a function" do
-      opts = [
-        rpc_url: @valid_ws_url,
-        dispatch_callback: "not a function"
-      ]
+    test "raises when no dispatch callback is provided", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
+      transport_opts = Keyword.delete(transport_opts, :dispatch_callback)
 
-      assert_raise ArgumentError, ~r/Invalid dispatch_callback function/, fn ->
-        Websocket.new(opts)
-      end
+      assert {:error, "Dispatcher callback function is required but was not provided"} =
+               Websocket.init_transport(transport_opts, opts)
     end
 
-    test "raises when dispatch_callback arity is not 1" do
-      opts = [
-        rpc_url: @valid_ws_url,
-        dispatch_callback: fn -> :ok end
-      ]
+    test "raises when dispatch_callback is not a function", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
+      transport_opts = Keyword.put(transport_opts, :dispatch_callback, "not a function")
 
-      assert_raise ArgumentError, ~r/Invalid dispatch_callback function/, fn ->
-        Websocket.new(opts)
-      end
+      assert {:error,
+              "Invalid dispatch_callback function: expected function with arity 1, got: \"not a function\""} =
+               Websocket.init_transport(transport_opts, opts)
     end
 
-    test "accepts both ws and wss URLs" do
+    test "raises when dispatch_callback arity is not 1", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
+      transport_opts = Keyword.put(transport_opts, :dispatch_callback, fn -> :ok end)
+
+      assert {:error, message} = Websocket.init_transport(transport_opts, opts)
+      assert message =~ "Invalid dispatch_callback function: expected function with arity 1, got:"
+    end
+
+    test "accepts both ws and wss URLs", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
       expect(Websocket.DynamicSupervisor, :start_websocket, 2, fn _ws_spec -> {:ok, self()} end)
 
       for url <- [@valid_ws_url, @valid_wss_url] do
-        opts = [
-          rpc_url: url,
-          dispatch_callback: fn _ -> :ok end
-        ]
-
-        assert %Websocket{} = Websocket.new(opts)
+        transport_opts = Keyword.put(transport_opts, :rpc_url, url)
+        assert {:ok, %Websocket{}} = Websocket.init_transport(transport_opts, opts)
       end
     end
   end
 
-  describe "call/2 - sending messages" do
+  describe "handle_request/2 - sending messages" do
     setup do
       expect(Websocket.DynamicSupervisor, :start_websocket, fn _ws_spec -> {:ok, self()} end)
 
-      {:ok, transport: Websocket.new(rpc_url: @valid_ws_url, dispatch_callback: fn _ -> :ok end)}
+      transport_opts = [rpc_url: @valid_ws_url, dispatch_callback: fn _ -> :ok end]
+      opts = []
+      {:ok, transport} = Websocket.init_transport(transport_opts, opts)
+      {:ok, transport: transport}
     end
 
     test "sends request through websocket", %{transport: transport} do
-      encoded_request = JSON.encode!(%{hello: "world"})
+      encoded_request = ~s({"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1})
       expect(Fresh, :send, fn _pid, {:text, ^encoded_request} -> :ok end)
-      assert :ok = Websocket.call(transport, encoded_request)
+      assert :ok = Websocket.handle_request(transport, encoded_request)
     end
   end
 
@@ -123,7 +140,7 @@ defmodule Exth.Transport.WebsocketTest do
         :ok
       end
 
-      encoded_response = %{id: 1, result: "0x1"} |> JSON.encode!()
+      encoded_response = ~s({id: 1, result: "0x1"})
 
       # Call handle_in directly with our test callback
       Websocket.handle_in({:text, encoded_response}, %Websocket.State{dispatch_callback: callback})

@@ -1,5 +1,10 @@
 defmodule Exth.Transport.Supervisor do
-  @moduledoc false
+  @moduledoc """
+  Supervisor for transport-related processes.
+
+  This module supervises the transport registry and dynamic supervisors for IPC and WebSocket
+  connections, ensuring proper lifecycle management of transport resources.
+  """
 
   use Supervisor
 

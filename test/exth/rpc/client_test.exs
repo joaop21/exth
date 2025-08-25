@@ -9,7 +9,7 @@ defmodule Exth.Rpc.ClientTest do
   alias Exth.Rpc.Request
   alias Exth.Rpc.Response
   alias Exth.TestTransport
-  alias Exth.Transport.Http
+  alias Exth.Transport
   alias Exth.TransportErrorTestTransport
 
   @valid_url "http://localhost:8545"
@@ -26,7 +26,7 @@ defmodule Exth.Rpc.ClientTest do
       client = Client.new(:http, rpc_url: @valid_url)
       assert %Client{} = client
       assert client.counter != nil
-      assert %Http{} = client.transport
+      assert %Transport{adapter: Transport.Http} = client.transport
     end
 
     test "creates a new client with WebSocket transport" do
@@ -45,13 +45,13 @@ defmodule Exth.Rpc.ClientTest do
     end
 
     test "fails to create client with invalid transport type" do
-      assert_raise FunctionClauseError, fn ->
+      assert_raise RuntimeError, ~r/Invalid client type/, fn ->
         Client.new(:invalid, rpc_url: "http://localhost:8545")
       end
     end
 
     test "fails to create HTTP client without URL" do
-      assert_raise ArgumentError, fn ->
+      assert_raise RuntimeError, ~r/RPC URL is required but was not provided/, fn ->
         Client.new(:http, [])
       end
     end
@@ -61,6 +61,12 @@ defmodule Exth.Rpc.ClientTest do
       assert %Client{} = client
       assert client.counter != nil
       assert client.transport != nil
+    end
+
+    test "fails to create client with invalid type" do
+      assert_raise RuntimeError, fn ->
+        Client.new(:invalid, rpc_url: "http://localhost:8545")
+      end
     end
   end
 

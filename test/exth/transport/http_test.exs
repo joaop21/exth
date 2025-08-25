@@ -12,53 +12,74 @@ defmodule Exth.Transport.HttpTest do
 
   setup_all do
     %{
-      base_opts: valid_transport_opts(),
+      transport_opts: valid_transport_opts(),
+      opts: [],
       sample_request: Request.new("eth_blockNumber", [], 1) |> Request.serialize(),
       known_methods: Exth.TestTransport.get_known_methods()
     }
   end
 
-  describe "new/1 - transport initialization" do
-    setup %{base_opts: base_opts} do
-      {:ok, opts: base_opts}
+  describe "init_transport/1 - transport initialization" do
+    test "creates transport with valid options", %{transport_opts: transport_opts, opts: opts} do
+      assert {:ok, %Http{client: %Tesla.Client{}}} = Http.init_transport(transport_opts, opts)
     end
 
-    test "creates transport with valid options", %{opts: opts} do
-      assert %Http{client: %Tesla.Client{}} = Http.new(opts)
+    test "validates required RPC URL", %{transport_opts: transport_opts, opts: opts} do
+      transport_opts = Keyword.delete(transport_opts, :rpc_url)
+
+      assert {:error, "RPC URL is required but was not provided"} =
+               Http.init_transport(transport_opts, opts)
     end
 
-    test "validates required RPC URL", %{opts: opts} do
-      assert_raise ArgumentError, ~r/RPC URL is required/, fn ->
-        Http.new(opts |> Keyword.delete(:rpc_url))
-      end
+    test "returns error when RPC URL is not a string", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
+      transport_opts = Keyword.put(transport_opts, :rpc_url, 123)
+
+      assert {:error, "Invalid RPC URL format: expected string, got: 123"} =
+               Http.init_transport(transport_opts, opts)
     end
 
-    test "validates URL format" do
-      invalid_urls = [
-        "not-a-url",
-        "ftp://example.com",
-        "http:/invalid",
-        123
-      ]
+    test "returns error when RPC URL has an invalid scheme", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
+      transport_opts = Keyword.put(transport_opts, :rpc_url, "ftp://example.com")
 
-      for url <- invalid_urls do
-        assert_raise ArgumentError, ~r/Invalid RPC URL/, fn ->
-          Http.new(Keyword.put(valid_transport_opts(), :rpc_url, url))
-        end
-      end
+      assert {:error,
+              "Invalid RPC URL format: \"ftp://example.com\". The URL must start with http:// or https://"} =
+               Http.init_transport(transport_opts, opts)
     end
 
-    test "accepts custom headers", %{opts: opts} do
-      opts = Keyword.put(opts, :headers, [{"x-api-key", "test"}])
-      transport = Http.new(opts)
+    test "returns error when RPC URL has no host", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
+      transport_opts = Keyword.put(transport_opts, :rpc_url, "http://")
 
+      assert {:error, "Invalid RPC URL format: \"http://\". The URL must contain a valid host"} =
+               Http.init_transport(transport_opts, opts)
+    end
+
+    test "accepts custom headers", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
+      transport_opts = Keyword.put(transport_opts, :headers, [{"x-api-key", "test"}])
+
+      assert {:ok, transport} = Http.init_transport(transport_opts, opts)
       assert %Tesla.Client{pre: pre} = transport.client
       {_, :call, [headers]} = find_middleware(pre, Tesla.Middleware.Headers)
       assert {"x-api-key", "test"} in headers
     end
 
-    test "sets default headers", %{opts: opts} do
-      transport = Http.new(opts)
+    test "sets default headers", %{
+      transport_opts: transport_opts,
+      opts: opts
+    } do
+      assert {:ok, transport} = Http.init_transport(transport_opts, opts)
+
       %Tesla.Client{pre: pre} = transport.client
       {_, :call, [headers]} = find_middleware(pre, Tesla.Middleware.Headers)
 
@@ -66,10 +87,11 @@ defmodule Exth.Transport.HttpTest do
       assert {"user-agent", _} = Enum.find(headers, &(elem(&1, 0) == "user-agent"))
     end
 
-    test "accepts custom timeout", %{opts: base_opts} do
+    test "accepts custom timeout", %{transport_opts: transport_opts, opts: opts} do
       timeout = 5_000
-      opts = Keyword.put(base_opts, :timeout, timeout)
-      transport = Http.new(opts)
+      transport_opts = Keyword.put(transport_opts, :timeout, timeout)
+
+      assert {:ok, transport} = Http.init_transport(transport_opts, opts)
 
       %Tesla.Client{pre: pre} = transport.client
       {_, :call, [middleware]} = find_middleware(pre, Tesla.Middleware.Timeout)
@@ -77,31 +99,31 @@ defmodule Exth.Transport.HttpTest do
     end
   end
 
-  describe "call/2 - RPC requests" do
-    setup %{base_opts: base_opts} do
-      opts = Keyword.put(base_opts, :adapter, MockAdapter)
-      transport = Http.new(opts)
+  describe "handle_request/2 - RPC requests" do
+    setup %{transport_opts: transport_opts, opts: opts} do
+      transport_opts = Keyword.put(transport_opts, :adapter, MockAdapter)
+      {:ok, transport} = Http.init_transport(transport_opts, opts)
       {:ok, transport: transport}
     end
 
     test "handles successful response", %{transport: transport, sample_request: request} do
       mock_success("0x1")
-      assert {:ok, encoded_response} = Http.call(transport, request)
+      assert {:ok, encoded_response} = Http.handle_request(transport, request)
       assert {:ok, %Response.Success{result: "0x1"}} = Response.deserialize(encoded_response)
     end
 
     test "handles various successful response types", %{transport: transport} do
       test_cases = [
-        {["0x1", "0x2"], "eth_getLogs"},
-        {%{"key" => "value"}, "eth_getBlock"},
-        {true, "eth_mining"},
-        {42, "eth_chainId"}
+        {"eth_getLogs", ["0x1", "0x2"]},
+        {"eth_getBlock", %{"key" => "value"}},
+        {"eth_mining", true},
+        {"eth_chainId", 42}
       ]
 
-      for {result, method} <- test_cases do
+      for {method, result} <- test_cases do
         mock_success(result)
         encoded_request = Request.new(method, [], 1) |> Request.serialize()
-        assert {:ok, encoded_response} = Http.call(transport, encoded_request)
+        assert {:ok, encoded_response} = Http.handle_request(transport, encoded_request)
         assert {:ok, %Response.Success{result: ^result}} = Response.deserialize(encoded_response)
       end
     end
@@ -119,7 +141,7 @@ defmodule Exth.Transport.HttpTest do
         mock_error(code, message)
         encoded_request = Request.new("test_method", [], 1) |> Request.serialize()
 
-        assert {:ok, encoded_response} = Http.call(transport, encoded_request)
+        assert {:ok, encoded_response} = Http.handle_request(transport, encoded_request)
 
         assert {:ok, %Response.Error{error: %{code: ^code, message: ^message}}} =
                  Response.deserialize(encoded_response)
@@ -131,7 +153,7 @@ defmodule Exth.Transport.HttpTest do
 
       for status <- error_codes do
         mock_http_error(status)
-        assert {:error, {:http_error, ^status}} = Http.call(transport, request)
+        assert {:error, {:http_error, ^status}} = Http.handle_request(transport, request)
       end
     end
 
@@ -140,27 +162,28 @@ defmodule Exth.Transport.HttpTest do
 
       for error <- network_errors do
         MockAdapter.mock(fn %{method: :post} -> {:error, error} end)
-        assert {:error, ^error} = Http.call(transport, request)
+        assert {:error, ^error} = Http.handle_request(transport, request)
       end
     end
 
     test "handles timeout with custom timeout value", %{
-      base_opts: base_opts,
+      transport_opts: transport_opts,
+      opts: opts,
       sample_request: request
     } do
-      opts =
-        base_opts
+      transport_opts =
+        transport_opts
         |> Keyword.put(:adapter, MockAdapter)
         |> Keyword.put(:timeout, 100)
 
-      transport = Http.new(opts)
+      {:ok, transport} = Http.init_transport(transport_opts, opts)
 
       MockAdapter.mock(fn %{method: :post} ->
         Process.sleep(200)
         {:error, :timeout}
       end)
 
-      assert {:error, :timeout} = Http.call(transport, request)
+      assert {:error, :timeout} = Http.handle_request(transport, request)
     end
   end
 

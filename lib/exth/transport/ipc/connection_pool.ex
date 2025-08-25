@@ -1,5 +1,36 @@
 defmodule Exth.Transport.Ipc.ConnectionPool do
-  @moduledoc false
+  @moduledoc """
+  Connection pool management for IPC transport connections.
+
+  This module provides connection pooling functionality for Unix domain socket connections
+  used by the IPC transport, utilizing NimblePool for efficient resource management.
+
+  ## Features
+
+    * Connection pooling with configurable pool size
+    * Automatic worker lifecycle management
+    * Configurable timeouts and idle worker policies
+    * Efficient connection reuse for better performance
+
+  ## Configuration Options
+
+    * `:path` - Required Unix domain socket path
+    * `:socket_opts` - Required TCP socket options
+    * `:pool_size` - Number of connections in the pool (default: 10)
+    * `:pool_lazy_workers` - Whether to create workers lazily (default: true)
+    * `:pool_worker_idle_timeout` - Worker idle timeout (default: nil)
+    * `:pool_max_idle_pings` - Maximum idle pings before worker termination (default: -1)
+
+  ## Example Usage
+
+      {:ok, pool} = ConnectionPool.start(
+        path: "/tmp/ethereum.ipc",
+        socket_opts: [:binary, active: false],
+        pool_size: 5
+      )
+
+      {:ok, response} = ConnectionPool.call(pool, request, 30_000)
+  """
 
   alias Exth.Transport
   alias Exth.Transport.Ipc

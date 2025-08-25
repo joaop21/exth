@@ -94,46 +94,53 @@ defmodule Exth.Rpc.Client do
   alias Exth.Rpc.Response
   alias Exth.Rpc.Types
   alias Exth.Transport
-  alias Exth.Transport.Transportable
 
   @transport_types [:custom, :http, :ipc, :websocket]
 
   @type t :: %__MODULE__{
           counter: :atomics.atomics_ref(),
-          transport: Transportable.t(),
+          transport: Transport.t(),
           handler: MessageHandler.handler() | nil
         }
 
   defstruct [:counter, :transport, :handler]
 
   @spec new(Transport.type(), keyword()) :: t()
-  def new(type, opts) when type in @transport_types do
-    case type do
-      :websocket ->
-        {:ok, handler} = MessageHandler.new(opts[:rpc_url])
+  def new(type, _opts) when type not in @transport_types, do: raise("Invalid client type")
 
-        opts =
-          Keyword.merge(opts,
-            dispatch_callback: fn encoded_response ->
-              MessageHandler.handle_response(handler, encoded_response)
-            end
-          )
+  def new(:websocket = type, opts) do
+    {:ok, handler} = MessageHandler.new(opts[:rpc_url])
 
-        transport = Transport.new(type, opts)
+    opts =
+      Keyword.merge(opts,
+        dispatch_callback: fn encoded_response ->
+          MessageHandler.handle_response(handler, encoded_response)
+        end
+      )
 
+    case Transport.new(type, opts) do
+      {:ok, transport} ->
         %__MODULE__{
           counter: :atomics.new(1, signed: false),
           transport: transport,
           handler: handler
         }
 
-      _ ->
-        transport = Transport.new(type, opts)
+      {:error, reason} ->
+        raise RuntimeError, message: reason
+    end
+  end
 
+  def new(type, opts) do
+    case Transport.new(type, opts) do
+      {:ok, transport} ->
         %__MODULE__{
           counter: :atomics.new(1, signed: false),
           transport: transport
         }
+
+      {:error, reason} ->
+        raise RuntimeError, message: reason
     end
   end
 
@@ -150,7 +157,7 @@ defmodule Exth.Rpc.Client do
   end
 
   @type send_argument_type :: t() | Call.t() | Request.t() | [Request.t()] | []
-  @type send_response_type :: Transport.call_response() | {:error, :duplicate_ids}
+  @type send_response_type :: Transport.request_response() | {:error, :duplicate_ids}
 
   @spec send(Call.t()) :: send_response_type()
   def send(%Call{} = call) do
@@ -196,7 +203,7 @@ defmodule Exth.Rpc.Client do
     with :ok <- validate_unique_ids(requests),
          requests <- assign_missing_ids(client, requests),
          {:ok, encoded_requests} <- Request.serialize(requests),
-         {:ok, encoded_response} <- Transport.call(client.transport, encoded_requests) do
+         {:ok, encoded_response} <- Transport.request(client.transport, encoded_requests) do
       Response.deserialize(encoded_response)
     end
   end

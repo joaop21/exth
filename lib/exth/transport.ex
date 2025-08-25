@@ -1,244 +1,166 @@
 defmodule Exth.Transport do
   @moduledoc """
-  Factory module for creating JSON-RPC transport implementations.
+  Core transport abstraction for JSON-RPC communication with EVM-compatible blockchain nodes.
 
-  This module provides a unified interface for creating and managing different transport
-  mechanisms (HTTP, WebSocket, IPC) for JSON-RPC communication with EVM nodes.
+  This module provides a unified interface for different transport mechanisms (HTTP, WebSocket, IPC)
+  and custom implementations, allowing seamless switching between transport layers while maintaining
+  consistent behavior.
 
   ## Features
 
-    * Pluggable transport system via the `Transportable` protocol
-    * Built-in HTTP transport with Tesla/Mint
-    * Built-in WebSocket transport with Fresh
-    * Consistent interface across transport types
-    * Configurable timeout and retry mechanisms
-    * Transport-specific option handling
+    * Multiple transport types: HTTP, WebSocket, IPC, and custom implementations
+    * Unified transport interface with adapter pattern
+    * Automatic transport initialization and lifecycle management
+    * Consistent request/response handling across all transport types
+    * Behaviour-based implementation for custom transports
 
   ## Transport Types
 
-  Currently supported:
-    * `:http` - HTTP/HTTPS transport using Tesla with Mint adapter
-    * `:websocket` - WebSocket transport using Fresh
-    * `:ipc` - Unix domain socket transport using NimblePool
-    * `:custom` - Custom transport implementations
+  The module supports the following built-in transport types:
 
-  ## Usage
+    * `:http` - Standard HTTP/HTTPS transport for RESTful JSON-RPC calls
+    * `:websocket` - WebSocket transport for real-time communication and subscriptions
+    * `:ipc` - Inter-Process Communication transport for local node connections
+    * `:custom` - Custom transport implementations for specialized use cases
+
+  ## Quick Start
 
       # Create an HTTP transport
-      transport = Transport.new(:http,
-        rpc_url: "https://mainnet.infura.io/v3/YOUR-PROJECT-ID",
-        timeout: 30_000,
-        headers: [{"authorization", "Bearer token"}]
-      )
+      {:ok, transport} = Transport.new(:http, rpc_url: "https://eth-mainnet.example.com")
+
+      # Make a request
+      {:ok, response} = Transport.request(transport, ~s({"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}))
 
       # Create a WebSocket transport
-      transport = Transport.new(:websocket,
-        rpc_url: "wss://mainnet.infura.io/ws/v3/YOUR-PROJECT-ID",
-        dispatch_callback: fn response -> handle_response(response) end
-      )
+      {:ok, ws_transport} = Transport.new(:websocket, rpc_url: "wss://eth-mainnet.example.com")
 
-      # Create an IPC transport
-      transport = Transport.new(:ipc,
-        path: "/tmp/ethereum.ipc",
-        timeout: 30_000,
-        pool_size: 10
-      )
-
-      # Make requests
-      {:ok, response} = Transport.call(transport, request)
-
-  ## Configuration
-
-  HTTP-specific options:
-
-    * `:rpc_url` - The endpoint URL
-    * `:headers` - Additional HTTP headers
-    * `:timeout` - Request timeout in milliseconds (default: 30000)
-    * `:adapter` - Tesla adapter to use (default: Tesla.Adapter.Mint)
-
-  WebSocket-specific options:
-
-    * `:rpc_url` - The endpoint URL
-    * `:dispatch_callback` - Callback function to handle incoming messages
-    * `:module` - Optional custom WebSocket implementation
-
-  IPC-specific options:
-
-    * `:path` - The Unix domain socket path (e.g., "/tmp/ethereum.ipc")
-    * `:timeout` - Request timeout in milliseconds (default: 30000)
-    * `:socket_opts` - TCP socket options (default: [:binary, active: false, reuseaddr: true])
-    * `:pool_size` - Number of connections in the pool (default: 10)
-    * `:pool_lazy_workers` - Whether to create workers lazily (default: true)
-    * `:pool_worker_idle_timeout` - Worker idle timeout (default: nil)
-    * `:pool_max_idle_pings` - Maximum idle pings before worker termination (default: -1)
+      # Create a custom transport
+      {:ok, custom_transport} = Transport.new(:custom, module: MyCustomTransport)
 
   ## Custom Transport Implementation
 
-  To implement a custom transport:
+  To implement a custom transport, use the `__using__` macro:
 
-  1. Define your transport struct:
+      defmodule MyCustomTransport do
+        use Exth.Transport
 
-         defmodule MyTransport do
-           defstruct [:config]
-         end
+        @impl Exth.Transport
+        def init_transport(opts, supervisor, registry) do
+          # Initialize your transport
+          {:ok, transport_state}
+        end
 
-  2. Implement the `Transportable` protocol:
+        @impl Exth.Transport
+        def handle_request(transport, request) do
+          # Handle the JSON-RPC request
+          {:ok, response}
+        end
+      end
 
-         defimpl Exth.Transport.Transportable, for: MyTransport do
-           def new(_transport, opts) do
-             %MyTransport{config: opts}
-           end
+  ## Architecture
 
-           def call(transport, request) do
-             # Implement request handling
-             {:ok, response}
-           end
-         end
+  The Transport module uses an adapter pattern where:
 
-  3. Use your transport:
-
-         transport = Transport.new(:custom,
-           module: MyTransport,
-           rpc_url: "custom://endpoint",
-           # other options...
-         )
-
-  ## Error Handling
-
-  The module uses consistent error handling:
-
-    * `{:ok, response}` - Successful request with response
-    * `{:ok, responses}` - Successful batch request with responses
-    * `{:error, reason}` - Request failed with detailed reason
-
-  HTTP-specific errors:
-    * `{:error, {:http_error, status}}` - HTTP error response
-    * `{:error, :timeout}` - Request timeout
-    * `{:error, :network_error}` - Network connectivity issues
-
-  WebSocket-specific errors:
-    * `{:error, :connection_failed}` - Failed to establish WebSocket connection
-    * `{:error, :invalid_url}` - Invalid WebSocket URL format
-    * `{:error, :missing_callback}` - Missing dispatch callback
-
-  IPC-specific errors:
-    * `{:error, {:socket_error, reason}}` - Socket communication error
-    * `{:error, :timeout}` - Request timeout
-
-  ## Best Practices
-
-    * Use appropriate timeouts for your use case
-    * Implement retry logic for transient failures
-    * Handle batch requests efficiently
-    * Monitor transport health and metrics
-    * Properly handle connection pooling
-    * Use secure transport options in production
-    * Use WebSocket transport for subscriptions and real-time updates
-    * Implement proper error handling in WebSocket dispatch callbacks
-
-  ## Supervision Tree
-
-  The transport subdomain uses a hierarchical supervision tree to manage connections and state:
-
-  <pre class="mermaid">
-    flowchart TD
-      A["Exth.Supervisor :one_for_one"] --> B["Exth.Transport.Supervisor :one_for_one"]
-      B --> C["Exth.Transport.Registry"]
-      B --> D["Exth.Transport.Websocket.DynamicSupervisor :one_for_one"]
-      C -.registers.- E["Exth.Transport.Websocket"]
-      D --> E
-
-      E@{ shape: procs}
-  </pre>
-
-  ### Supervision Strategy
-
-  * **Exth.Supervisor**: Application-level supervisor using `:one_for_one` strategy
-  * **Exth.Transport.Supervisor**: Transport-level supervisor using `:one_for_one` strategy
-  * **Exth.Transport.Websocket.DynamicSupervisor**: Dynamic supervisor for WebSocket connections using `:one_for_one` strategy
-
-  ### Components
-
-  * **Exth.Transport.Registry**: Manages named processes for WebSocket connections
-  * **Exth.Transport.Websocket.DynamicSupervisor**: Dynamically starts and supervises individual WebSocket connections
-  * **WebSocket Connections**: Individual Fresh WebSocket processes managed by the dynamic supervisor
-
-  This supervision structure ensures:
-    * Fault isolation between different transport types
-    * Automatic restart of failed WebSocket connections
-    * Proper cleanup of resources
-    * Scalable connection management
-
-  See `Exth.Transport.Transportable` for protocol details and
-  `Exth.Transport.Http` for HTTP transport specifics.
+    1. `Transport.new/2` creates a transport struct with the appropriate adapter
+    2. The adapter handles transport-specific initialization and configuration
+    3. `Transport.request/2` delegates requests to the adapter's `handle_request/2` callback
+    4. Each transport type implements the `Exth.Transport` behaviour
   """
 
-  alias __MODULE__.Transportable
+  ###
+  ### Types
+  ###
 
-  @typedoc """
-  Supported transport types:
-  * `:http` - HTTP/HTTPS transport
-  * `:websocket` - Websocket transport
-  * `:custom` - Custom transport implementation
-  """
-  @type type :: :custom | :http | :websocket
+  @type adapter_config :: term()
 
-  @typedoc """
-  Transport configuration options.
-  """
-  @type options :: [
-          rpc_url: String.t(),
-          module: module() | nil
-        ]
+  @transport_types [:custom, :http, :ipc, :websocket]
 
-  @doc """
-  Creates a new transport struct with the given type and options.
+  @transport_type @transport_types
+                  |> Enum.reverse()
+                  |> then(fn [first | rest] -> Enum.reduce(rest, first, &{:|, [], [&1, &2]}) end)
 
-  ## Parameters
-    * `type` - The type of transport to create (`:http`, `:websocket` or `:custom`)
-    * `opts` - Configuration options for the transport
+  @type type :: unquote(@transport_type)
 
-  ## Returns
-    * A configured transport struct implementing the `Transportable` protocol
+  @type transport_options() :: keyword()
+  @type options :: [supervisor: pid(), registry: pid()]
+  @type request_response :: :ok | {:ok, String.t()} | {:error, term()}
 
-  ## Raises
-    * `ArgumentError` if required options are missing or type is invalid
-  """
-  @spec new(type(), options()) :: Transportable.t()
-  def new(type, opts) do
-    module = get_transport_module(type, opts)
-    transport = struct(module, %{})
+  ###
+  ### Struct
+  ###
 
-    Transportable.new(transport, opts)
-  end
+  @type t :: %__MODULE__{
+          adapter: module(),
+          adapter_config: adapter_config()
+        }
 
-  defp get_transport_module(:custom, opts) do
-    opts[:module] || raise ArgumentError, "missing required option :module"
-  end
+  defstruct [:adapter, :adapter_config]
 
-  defp get_transport_module(type, opts) do
-    case {type, opts[:module]} do
-      {:http, nil} -> __MODULE__.Http
-      {:ipc, nil} -> __MODULE__.Ipc
-      {:websocket, nil} -> __MODULE__.Websocket
-      {_, module} when not is_nil(module) -> module
-      _ -> raise ArgumentError, "invalid transport type: #{inspect(type)}"
+  ###
+  ### Behaviour callbacks
+  ###
+
+  @callback init_transport(transport_options(), options()) ::
+              {:ok, adapter_config()} | {:error, term()}
+
+  @callback handle_request(transport_state :: adapter_config(), request :: String.t()) ::
+              request_response()
+
+  ###
+  ### Macros
+  ###
+
+  defmacro __using__(_opts) do
+    quote location: :keep do
+      @behaviour Exth.Transport
+
+      @before_compile Exth.Transport
     end
   end
 
-  @type call_response :: Transportable.call_response()
+  defmacro __before_compile__(env) do
+    not_implemented =
+      __MODULE__.behaviour_info(:callbacks)
+      |> Enum.filter(&(not Module.defines?(env.module, &1)))
+      |> Enum.map(fn {function, arity} -> "#{function}/#{arity}" end)
 
-  @doc """
-  Makes a request using the configured transport.
+    if not_implemented != [] do
+      raise CompileError,
+        description: """
+        The behaviour Exth.Transport is not implemented (in module #{inspect(env.module)}).
+        You must implement the following functions: #{Enum.join(not_implemented, ", ")}
+        """
+    end
+  end
 
-  ## Parameters
-    * `transportable` - The configured transport instance
-    * `request` - The JSON-RPC encoded request to send
+  ###
+  ### Public API
+  ###
 
-  ## Returns
-    * `{:ok, response}` - Successful request with encoded response
-    * `{:error, reason}` - Request failed with error reason
-  """
-  @spec call(Transportable.t(), String.t()) :: call_response()
-  def call(transportable, encoded_request), do: Transportable.call(transportable, encoded_request)
+  @spec new(type(), transport_options()) :: {:ok, t()} | {:error, term()}
+  def new(type, opts) when type in @transport_types do
+    with {:ok, adapter} <- fetch_transport_module(type, opts),
+         {:ok, adapter_config} <- adapter.init_transport(opts, []) do
+      {:ok, %__MODULE__{adapter: adapter, adapter_config: adapter_config}}
+    end
+  end
+
+  def new(type, _opts) do
+    {:error, "Invalid transport type: #{inspect(type)}"}
+  end
+
+  defp fetch_transport_module(type, opts) do
+    case {type, Keyword.get(opts, :module)} do
+      {:http, nil} -> {:ok, __MODULE__.Http}
+      {:ipc, nil} -> {:ok, __MODULE__.Ipc}
+      {:websocket, nil} -> {:ok, __MODULE__.Websocket}
+      {_, module} when not is_nil(module) -> {:ok, module}
+      _ -> {:error, "Invalid transport type: #{inspect(type)}"}
+    end
+  end
+
+  @spec request(t(), String.t()) :: request_response()
+  def request(%__MODULE__{} = transport, request) do
+    transport.adapter.handle_request(transport.adapter_config, request)
+  end
 end

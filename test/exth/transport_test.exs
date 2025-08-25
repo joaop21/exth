@@ -6,48 +6,36 @@ defmodule Exth.TransportTest do
   alias Exth.Rpc.{Request, Response}
   alias Exth.TestTransport
   alias Exth.Transport
-  alias Exth.Transport.Http
   alias Exth.TransportFixtures
 
   import TransportFixtures
 
   describe "new/2" do
     test "creates an HTTP transport with valid options" do
-      assert %Http{} = Transport.new(:http, valid_transport_opts())
+      assert {:ok, %Transport{adapter: Transport.Http}} =
+               Transport.new(:http, valid_transport_opts())
     end
 
     test "creates a custom transport with valid options" do
-      assert %TestTransport{} = Transport.new(:custom, valid_custom_transport_opts())
+      assert {:ok, %Transport{adapter: TestTransport}} =
+               Transport.new(:custom, valid_custom_transport_opts())
     end
 
     test "validates custom transport requirements" do
-      assert_raise ArgumentError, ~r/missing required option :module/, fn ->
-        Transport.new(:custom, valid_transport_opts())
-      end
+      assert {:error, "Invalid transport type: :custom"} =
+               Transport.new(:custom, valid_transport_opts())
     end
 
     test "validates transport type" do
-      assert_raise ArgumentError, ~r/invalid transport type/, fn ->
-        Transport.new(:invalid, valid_transport_opts())
-      end
-    end
-
-    test "validates transport module implements protocol" do
-      defmodule InvalidTransport do
-        defstruct []
-      end
-
-      opts = valid_transport_opts() ++ [module: InvalidTransport]
-
-      assert_raise Protocol.UndefinedError, fn ->
-        Transport.new(:custom, opts)
-      end
+      assert {:error, "Invalid transport type: :invalid"} =
+               Transport.new(:invalid, valid_transport_opts())
     end
   end
 
-  describe "call/2" do
+  describe "request/2" do
     setup do
-      {:ok, transport: Transport.new(:custom, valid_custom_transport_opts())}
+      {:ok, transport} = Transport.new(:custom, valid_custom_transport_opts())
+      {:ok, transport: transport}
     end
 
     test "handles successful RPC calls", %{transport: transport} do
@@ -59,7 +47,7 @@ defmodule Exth.TransportTest do
         {:ok, encoded_request} =
           Request.new(method, [], System.unique_integer([:positive])) |> Request.serialize()
 
-        assert {:ok, encoded_response} = Transport.call(transport, encoded_request)
+        assert {:ok, encoded_response} = Transport.request(transport, encoded_request)
 
         assert {:ok, %Response.Success{result: ^expected}} =
                  Response.deserialize(encoded_response)
@@ -69,7 +57,7 @@ defmodule Exth.TransportTest do
     test "handles unknown methods", %{transport: transport} do
       {:ok, encoded_request} = Request.new("unknown_method", [], 1) |> Request.serialize()
 
-      assert {:ok, encoded_response} = Transport.call(transport, encoded_request)
+      assert {:ok, encoded_response} = Transport.request(transport, encoded_request)
 
       assert {:ok, %Response.Error{error: %{code: -32_601}}} =
                Response.deserialize(encoded_response)
@@ -79,7 +67,7 @@ defmodule Exth.TransportTest do
       id = System.unique_integer([:positive])
       {:ok, encoded_request} = Request.new("eth_blockNumber", [], id) |> Request.serialize()
 
-      assert {:ok, encoded_response} = Transport.call(transport, encoded_request)
+      assert {:ok, encoded_response} = Transport.request(transport, encoded_request)
       assert {:ok, %Response.Success{id: ^id}} = Response.deserialize(encoded_response)
     end
   end

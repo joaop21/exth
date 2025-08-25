@@ -46,8 +46,8 @@ defmodule Exth.Rpc.MessageHandlerTest do
       rpc_url = "#{@base_url}/#{test_name}"
       {:ok, handler} = MessageHandler.new(rpc_url)
 
-      transport =
-        Transport.new(:websocket, rpc_url: rpc_url, module: AsyncTestTransport)
+      {:ok, transport} =
+        Transport.new(:custom, rpc_url: rpc_url, module: AsyncTestTransport)
 
       on_exit(:kill_handler, fn ->
         if pid = Process.whereis(handler) do
@@ -109,7 +109,7 @@ defmodule Exth.Rpc.MessageHandlerTest do
     test "handles transport errors", %{handler: handler, transport: transport} do
       request = Request.new("eth_blockNumber", [], 1)
 
-      expect(Transport, :call, fn _transport, _request ->
+      expect(Transport, :request, fn _transport, _request ->
         {:error, :connection_refused}
       end)
 
@@ -170,7 +170,7 @@ defmodule Exth.Rpc.MessageHandlerTest do
       rpc_url = "#{@base_url}/#{test_name}"
       {:ok, handler} = MessageHandler.new(rpc_url)
 
-      transport =
+      {:ok, transport} =
         Transport.new(:websocket, rpc_url: rpc_url, module: AsyncTestTransport)
 
       on_exit(:kill_handler, fn ->
