@@ -107,33 +107,41 @@ defmodule Exth.Rpc.Client do
   defstruct [:counter, :transport, :handler]
 
   @spec new(Transport.type(), keyword()) :: t()
-  def new(type, opts) when type in @transport_types do
-    case type do
-      :websocket ->
-        {:ok, handler} = MessageHandler.new(opts[:rpc_url])
+  def new(type, _opts) when type not in @transport_types, do: raise("Invalid client type")
 
-        opts =
-          Keyword.merge(opts,
-            dispatch_callback: fn encoded_response ->
-              MessageHandler.handle_response(handler, encoded_response)
-            end
-          )
+  def new(:websocket = type, opts) do
+    {:ok, handler} = MessageHandler.new(opts[:rpc_url])
 
-        {:ok, transport} = Transport.new(type, opts)
+    opts =
+      Keyword.merge(opts,
+        dispatch_callback: fn encoded_response ->
+          MessageHandler.handle_response(handler, encoded_response)
+        end
+      )
 
+    case Transport.new(type, opts) do
+      {:ok, transport} ->
         %__MODULE__{
           counter: :atomics.new(1, signed: false),
           transport: transport,
           handler: handler
         }
 
-      _ ->
-        {:ok, transport} = Transport.new(type, opts)
+      {:error, reason} ->
+        raise RuntimeError, message: reason
+    end
+  end
 
+  def new(type, opts) do
+    case Transport.new(type, opts) do
+      {:ok, transport} ->
         %__MODULE__{
           counter: :atomics.new(1, signed: false),
           transport: transport
         }
+
+      {:error, reason} ->
+        raise RuntimeError, message: reason
     end
   end
 
