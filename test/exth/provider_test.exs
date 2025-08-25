@@ -40,14 +40,14 @@ defmodule Exth.ProviderTest do
       client = ConfigTestProvider.get_client()
 
       # Verify that inline config takes precedence
-      assert client.transport.adapter_state.config[:rpc_url] == "http://inline-url"
+      assert client.transport.adapter_config.config[:rpc_url] == "http://inline-url"
       # Verify that application config is used when not overridden
-      assert client.transport.adapter_state.config[:timeout] == 5000
+      assert client.transport.adapter_config.config[:timeout] == 5000
       # Verify that inline-only config is present
-      assert client.transport.adapter_state.config[:max_retries] == 3
+      assert client.transport.adapter_config.config[:max_retries] == 3
       # Verify that transport type and module are set correctly
-      assert client.transport.adapter_state.config[:transport_type] == :custom
-      assert client.transport.adapter_state.config[:module] == TestTransport
+      assert client.transport.adapter_config.config[:transport_type] == :custom
+      assert client.transport.adapter_config.config[:module] == TestTransport
     end
 
     test "uses application config when no inline config is provided" do
@@ -70,12 +70,12 @@ defmodule Exth.ProviderTest do
       client = AppConfigTestProvider.get_client()
 
       # Verify that application config is used
-      assert client.transport.adapter_state.config[:rpc_url] == "http://app-config-url"
-      assert client.transport.adapter_state.config[:timeout] == 10_000
-      assert client.transport.adapter_state.config[:max_retries] == 5
+      assert client.transport.adapter_config.config[:rpc_url] == "http://app-config-url"
+      assert client.transport.adapter_config.config[:timeout] == 10_000
+      assert client.transport.adapter_config.config[:max_retries] == 5
       # Verify that transport type and module are set correctly
-      assert client.transport.adapter_state.config[:transport_type] == :custom
-      assert client.transport.adapter_state.config[:module] == TestTransport
+      assert client.transport.adapter_config.config[:transport_type] == :custom
+      assert client.transport.adapter_config.config[:module] == TestTransport
     end
 
     test "requires essential configuration options" do
@@ -116,7 +116,7 @@ defmodule Exth.ProviderTest do
       # Get the client to force compilation
       client = IpcTestProvider.get_client()
 
-      assert client.transport.adapter_state.path == "/tmp/valid.sock"
+      assert client.transport.adapter_config.path == "/tmp/valid.sock"
     end
 
     test "does not accept :path when transport_type is not :ipc" do

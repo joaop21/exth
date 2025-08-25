@@ -71,7 +71,7 @@ defmodule Exth.Transport do
   ### Types
   ###
 
-  @type adapter_state :: term()
+  @type adapter_config :: term()
 
   @transport_types [:custom, :http, :ipc, :websocket]
 
@@ -91,19 +91,19 @@ defmodule Exth.Transport do
 
   @type t :: %__MODULE__{
           adapter: module(),
-          adapter_state: adapter_state()
+          adapter_config: adapter_config()
         }
 
-  defstruct [:adapter, :adapter_state]
+  defstruct [:adapter, :adapter_config]
 
   ###
   ### Behaviour callbacks
   ###
 
   @callback init_transport(transport_options(), options()) ::
-              {:ok, adapter_state()} | {:error, term()}
+              {:ok, adapter_config()} | {:error, term()}
 
-  @callback handle_request(transport_state :: adapter_state(), request :: String.t()) ::
+  @callback handle_request(transport_state :: adapter_config(), request :: String.t()) ::
               request_response()
 
   ###
@@ -140,8 +140,8 @@ defmodule Exth.Transport do
   @spec new(transport_type(), transport_options()) :: {:ok, t()} | {:error, term()}
   def new(type, opts) when type in @transport_types do
     with {:ok, adapter} <- fetch_transport_module(type, opts),
-         {:ok, adapter_state} <- adapter.init_transport(opts, []) do
-      {:ok, %__MODULE__{adapter: adapter, adapter_state: adapter_state}}
+         {:ok, adapter_config} <- adapter.init_transport(opts, []) do
+      {:ok, %__MODULE__{adapter: adapter, adapter_config: adapter_config}}
     end
   end
 
@@ -161,6 +161,6 @@ defmodule Exth.Transport do
 
   @spec request(t(), String.t()) :: request_response()
   def request(%__MODULE__{} = transport, request) do
-    transport.adapter.handle_request(transport.adapter_state, request)
+    transport.adapter.handle_request(transport.adapter_config, request)
   end
 end
