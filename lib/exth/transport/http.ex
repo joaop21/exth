@@ -1,36 +1,20 @@
 defmodule Exth.Transport.Http do
   @moduledoc """
-  HTTP transport implementation for JSON-RPC communication with EVM nodes.
+  HTTP transport for JSON-RPC endpoints.
 
-  This module provides HTTP/HTTPS transport capabilities using Tesla HTTP client with
-  configurable middleware, timeouts, and custom headers.
+  Uses Tesla with Mint adapter by default. Supports custom headers, timeouts, and adapters.
 
-  ## Features
+  ## Options
 
-    * HTTP/HTTPS transport support
-    * Configurable timeouts and custom headers
-    * Automatic URL validation and formatting
-    * Built-in middleware for base URL, headers, and timeout
-    * Customizable HTTP adapter (defaults to Mint)
+    * `:rpc_url` - HTTP/HTTPS endpoint URL (required)
+    * `:timeout` - Request timeout in ms (default: 30,000)
+    * `:headers` - Custom HTTP headers
+    * `:adapter` - Tesla adapter (default: Tesla.Adapter.Mint)
 
-  ## Configuration Options
+  ## Example
 
-    * `:rpc_url` - Required HTTP/HTTPS endpoint URL
-    * `:timeout` - Request timeout in milliseconds (default: 30,000ms)
-    * `:headers` - Custom HTTP headers to include with requests
-    * `:adapter` - Custom Tesla adapter (defaults to `Tesla.Adapter.Mint`)
-
-  ## Example Usage
-
-      # Create HTTP transport
-      {:ok, transport} = Transport.new(:http,
-        rpc_url: "https://eth-mainnet.example.com",
-        timeout: 15_000,
-        headers: [{"authorization", "Bearer token"}]
-      )
-
-      # Make HTTP request
-      {:ok, response} = Transport.call(transport, json_request)
+      {:ok, transport} = Transport.new(:http, rpc_url: "https://api.example.com")
+      {:ok, response} = Transport.request(transport, json_request)
   """
 
   use Exth.Transport

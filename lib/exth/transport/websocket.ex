@@ -1,50 +1,25 @@
 defmodule Exth.Transport.Websocket do
   @moduledoc """
-  WebSocket transport implementation for JSON-RPC communication with EVM nodes.
+  WebSocket transport for real-time JSON-RPC communication.
 
-  This module provides WebSocket transport capabilities using the Fresh WebSocket client
-  library, enabling real-time communication and subscription support for JSON-RPC endpoints.
+  Messages are sent via `Transport.request/2` and responses arrive via the dispatch callback.
 
-  ## Features
+  > #### Performance consideration {: .warning}
+  >
+  > The dispatch callback runs in the WebSocket process. Be aware that intensive 
+  > processing in the callback will block message handling and may affect connection performance.
 
-    * Full-duplex WebSocket communication
-    * Support for both ws:// and wss:// protocols
-    * Automatic connection management and lifecycle
-    * Asynchronous message handling via dispatch callbacks
-    * Connection state management and supervision
-    * Real-time subscription support
+  ## Options
 
-  ## Configuration Options
+    * `:rpc_url` - WebSocket endpoint (ws:// or wss://, required)
+    * `:dispatch_callback` - Function to handle incoming messages (required)
 
-    * `:rpc_url` - Required WebSocket endpoint URL (must start with ws:// or wss://)
-    * `:dispatch_callback` - Required function to handle incoming messages (arity 1)
-    * `:timeout` - Connection timeout in milliseconds (default: 30,000ms)
+  ## Example
 
-  ## Example Usage
-
-      # Create WebSocket transport
       {:ok, transport} = Transport.new(:websocket,
-        rpc_url: "wss://eth-mainnet.example.com",
+        rpc_url: "wss://api.example.com",
         dispatch_callback: fn response -> handle_response(response) end
       )
-
-      # Make WebSocket request
-      {:ok, response} = Transport.request(transport, json_request)
-
-  ## Message Flow
-
-  1. Transport is initialized with a dispatch callback
-  2. WebSocket connection is established via dynamic supervisor
-  3. Outgoing messages are sent through `Transport.request/2`
-  4. Incoming messages are handled by the dispatch callback
-  5. Connection is maintained for subsequent requests
-
-  ## Best Practices
-
-    * Use wss:// for production environments
-    * Implement proper error handling in dispatch callbacks
-    * Monitor connection health and implement reconnection logic
-    * Clean up resources when done
   """
 
   use Fresh
