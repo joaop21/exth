@@ -79,7 +79,7 @@ defmodule Exth.Transport do
                   |> Enum.reverse()
                   |> then(fn [first | rest] -> Enum.reduce(rest, first, &{:|, [], [&1, &2]}) end)
 
-  @type transport_type :: unquote(@transport_type)
+  @type type :: unquote(@transport_type)
 
   @type transport_options() :: keyword()
   @type options :: [supervisor: pid(), registry: pid()]
@@ -137,7 +137,7 @@ defmodule Exth.Transport do
   ### Public API
   ###
 
-  @spec new(transport_type(), transport_options()) :: {:ok, t()} | {:error, term()}
+  @spec new(type(), transport_options()) :: {:ok, t()} | {:error, term()}
   def new(type, opts) when type in @transport_types do
     with {:ok, adapter} <- fetch_transport_module(type, opts),
          {:ok, adapter_config} <- adapter.init_transport(opts, []) do
