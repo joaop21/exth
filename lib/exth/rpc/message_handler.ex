@@ -125,7 +125,7 @@ defmodule Exth.Rpc.MessageHandler do
   ## Example
       {:ok, response} = MessageHandler.call(handler, request, transport)
   """
-  @spec call(handler(), [Request.t()], Transport.Transportable.t(), timeout()) ::
+  @spec call(handler(), [Request.t()], Transport.t(), timeout()) ::
           {:ok, [Response.t()]} | {:error, term()}
   def call(handler, requests, transport, timeout \\ @call_timeout) do
     case get_request_type(requests) do

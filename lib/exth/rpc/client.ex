@@ -94,13 +94,12 @@ defmodule Exth.Rpc.Client do
   alias Exth.Rpc.Response
   alias Exth.Rpc.Types
   alias Exth.Transport
-  alias Exth.Transport.Transportable
 
   @transport_types [:custom, :http, :ipc, :websocket]
 
   @type t :: %__MODULE__{
           counter: :atomics.atomics_ref(),
-          transport: Transportable.t(),
+          transport: Transport.t(),
           handler: MessageHandler.handler() | nil
         }
 
