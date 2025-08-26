@@ -202,6 +202,7 @@ end
 ```
 
 **HTTP Features:**
+
 - Built on Tesla HTTP client with middleware support
 - Configurable adapters (Mint, Hackney, etc.)
 - Configurable headers and timeouts
@@ -233,6 +234,7 @@ request = Rpc.request("eth_subscribe", ["newHeads"])
 ```
 
 **WebSocket Features:**
+
 - Full-duplex communication
 - Support for subscriptions and real-time updates
 - Automatic connection management and lifecycle
@@ -269,6 +271,7 @@ request = Rpc.request("eth_blockNumber", [])
 ```
 
 **IPC Features:**
+
 - Unix domain socket communication
 - Connection pooling with NimblePool for efficient resource management
 - Low latency for local nodes
@@ -276,6 +279,7 @@ request = Rpc.request("eth_blockNumber", [])
 - **Note**: Only available on Unix-like systems
 
 **IPC Configuration Options:**
+
 - `:path` - (required) The Unix domain socket path (e.g., "/tmp/ethereum.ipc")
 - `:timeout` - Request timeout in milliseconds (default: 30,000ms)
 - `:socket_opts` - TCP socket options (default: [:binary, active: false, reuseaddr: true])
@@ -294,7 +298,7 @@ defmodule MyCustomTransport do
   use Exth.Transport
 
   @impl Exth.Transport
-  def init_transport(opts, _opts) do
+  def init_transport(opts) do
     # Initialize your transport
     {:ok, transport_state}
   end
@@ -325,6 +329,7 @@ end
 ```
 
 **Custom Transport Features:**
+
 - Full control over transport implementation
 - Custom state management
 - Behaviour-based implementation for consistency
