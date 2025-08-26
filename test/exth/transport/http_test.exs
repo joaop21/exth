@@ -12,73 +12,57 @@ defmodule Exth.Transport.HttpTest do
 
   setup_all do
     %{
-      transport_opts: valid_transport_opts(),
-      opts: [],
+      opts: valid_transport_opts(),
       sample_request: Request.new("eth_blockNumber", [], 1) |> Request.serialize(),
       known_methods: Exth.TestTransport.get_known_methods()
     }
   end
 
-  describe "init_transport/1 - transport initialization" do
-    test "creates transport with valid options", %{transport_opts: transport_opts, opts: opts} do
-      assert {:ok, %Http{client: %Tesla.Client{}}} = Http.init_transport(transport_opts, opts)
+  describe "init/1 - transport initialization" do
+    test "creates transport with valid options", %{opts: opts} do
+      assert {:ok, %Http{client: %Tesla.Client{}}} = Http.init(opts)
     end
 
-    test "validates required RPC URL", %{transport_opts: transport_opts, opts: opts} do
-      transport_opts = Keyword.delete(transport_opts, :rpc_url)
+    test "validates required RPC URL", %{opts: opts} do
+      opts = Keyword.delete(opts, :rpc_url)
 
       assert {:error, "RPC URL is required but was not provided"} =
-               Http.init_transport(transport_opts, opts)
+               Http.init(opts)
     end
 
-    test "returns error when RPC URL is not a string", %{
-      transport_opts: transport_opts,
-      opts: opts
-    } do
-      transport_opts = Keyword.put(transport_opts, :rpc_url, 123)
+    test "returns error when RPC URL is not a string", %{opts: opts} do
+      opts = Keyword.put(opts, :rpc_url, 123)
 
       assert {:error, "Invalid RPC URL format: expected string, got: 123"} =
-               Http.init_transport(transport_opts, opts)
+               Http.init(opts)
     end
 
-    test "returns error when RPC URL has an invalid scheme", %{
-      transport_opts: transport_opts,
-      opts: opts
-    } do
-      transport_opts = Keyword.put(transport_opts, :rpc_url, "ftp://example.com")
+    test "returns error when RPC URL has an invalid scheme", %{opts: opts} do
+      opts = Keyword.put(opts, :rpc_url, "ftp://example.com")
 
       assert {:error,
               "Invalid RPC URL format: \"ftp://example.com\". The URL must start with http:// or https://"} =
-               Http.init_transport(transport_opts, opts)
+               Http.init(opts)
     end
 
-    test "returns error when RPC URL has no host", %{
-      transport_opts: transport_opts,
-      opts: opts
-    } do
-      transport_opts = Keyword.put(transport_opts, :rpc_url, "http://")
+    test "returns error when RPC URL has no host", %{opts: opts} do
+      opts = Keyword.put(opts, :rpc_url, "http://")
 
       assert {:error, "Invalid RPC URL format: \"http://\". The URL must contain a valid host"} =
-               Http.init_transport(transport_opts, opts)
+               Http.init(opts)
     end
 
-    test "accepts custom headers", %{
-      transport_opts: transport_opts,
-      opts: opts
-    } do
-      transport_opts = Keyword.put(transport_opts, :headers, [{"x-api-key", "test"}])
+    test "accepts custom headers", %{opts: opts} do
+      opts = Keyword.put(opts, :headers, [{"x-api-key", "test"}])
 
-      assert {:ok, transport} = Http.init_transport(transport_opts, opts)
+      assert {:ok, transport} = Http.init(opts)
       assert %Tesla.Client{pre: pre} = transport.client
       {_, :call, [headers]} = find_middleware(pre, Tesla.Middleware.Headers)
       assert {"x-api-key", "test"} in headers
     end
 
-    test "sets default headers", %{
-      transport_opts: transport_opts,
-      opts: opts
-    } do
-      assert {:ok, transport} = Http.init_transport(transport_opts, opts)
+    test "sets default headers", %{opts: opts} do
+      assert {:ok, transport} = Http.init(opts)
 
       %Tesla.Client{pre: pre} = transport.client
       {_, :call, [headers]} = find_middleware(pre, Tesla.Middleware.Headers)
@@ -87,11 +71,11 @@ defmodule Exth.Transport.HttpTest do
       assert {"user-agent", _} = Enum.find(headers, &(elem(&1, 0) == "user-agent"))
     end
 
-    test "accepts custom timeout", %{transport_opts: transport_opts, opts: opts} do
+    test "accepts custom timeout", %{opts: opts} do
       timeout = 5_000
-      transport_opts = Keyword.put(transport_opts, :timeout, timeout)
+      opts = Keyword.put(opts, :timeout, timeout)
 
-      assert {:ok, transport} = Http.init_transport(transport_opts, opts)
+      assert {:ok, transport} = Http.init(opts)
 
       %Tesla.Client{pre: pre} = transport.client
       {_, :call, [middleware]} = find_middleware(pre, Tesla.Middleware.Timeout)
@@ -100,9 +84,9 @@ defmodule Exth.Transport.HttpTest do
   end
 
   describe "handle_request/2 - RPC requests" do
-    setup %{transport_opts: transport_opts, opts: opts} do
-      transport_opts = Keyword.put(transport_opts, :adapter, MockAdapter)
-      {:ok, transport} = Http.init_transport(transport_opts, opts)
+    setup %{opts: opts} do
+      opts = Keyword.put(opts, :adapter, MockAdapter)
+      {:ok, transport} = Http.init(opts)
       {:ok, transport: transport}
     end
 
@@ -167,16 +151,15 @@ defmodule Exth.Transport.HttpTest do
     end
 
     test "handles timeout with custom timeout value", %{
-      transport_opts: transport_opts,
       opts: opts,
       sample_request: request
     } do
-      transport_opts =
-        transport_opts
+      opts =
+        opts
         |> Keyword.put(:adapter, MockAdapter)
         |> Keyword.put(:timeout, 100)
 
-      {:ok, transport} = Http.init_transport(transport_opts, opts)
+      {:ok, transport} = Http.init(opts)
 
       MockAdapter.mock(fn %{method: :post} ->
         Process.sleep(200)

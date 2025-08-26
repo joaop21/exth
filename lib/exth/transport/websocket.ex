@@ -70,11 +70,11 @@ defmodule Exth.Transport.Websocket do
   end
 
   @impl Exth.Transport
-  def init_transport(transport_opts, _opts) do
-    with {:ok, rpc_url} <- validate_required_url(transport_opts[:rpc_url]),
+  def init(opts) do
+    with {:ok, rpc_url} <- validate_required_url(opts[:rpc_url]),
          :ok <- validate_url_format(rpc_url),
          {:ok, dispatch_callback} <-
-           validate_required_dispatch_callback(transport_opts[:dispatch_callback]) do
+           validate_required_dispatch_callback(opts[:dispatch_callback]) do
       name = via_tuple(rpc_url)
 
       child_spec = {

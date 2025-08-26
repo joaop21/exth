@@ -67,12 +67,12 @@ defmodule Exth.Transport.Ipc do
   @default_socket_opts [:binary, active: false, reuseaddr: true]
 
   @impl true
-  def init_transport(transport_opts, _opts) do
-    with {:ok, path} <- validate_required_path(transport_opts[:path]) do
-      timeout = transport_opts[:timeout] || @default_timeout
-      socket_opts = transport_opts[:socket_opts] || @default_socket_opts
+  def init(opts) do
+    with {:ok, path} <- validate_required_path(opts[:path]) do
+      timeout = opts[:timeout] || @default_timeout
+      socket_opts = opts[:socket_opts] || @default_socket_opts
 
-      {:ok, pool} = ConnectionPool.start(transport_opts ++ [socket_opts: socket_opts])
+      {:ok, pool} = ConnectionPool.start(opts ++ [socket_opts: socket_opts])
 
       {:ok,
        %__MODULE__{
