@@ -1,52 +1,19 @@
 defmodule Exth.Transport.Ipc do
   @moduledoc """
-  IPC (Inter-Process Communication) transport implementation for JSON-RPC communication with EVM nodes.
+  IPC transport for local Unix domain socket connections.
 
-  This module provides IPC transport capabilities using Unix domain sockets, enabling local
-  communication with Ethereum nodes running on the same machine.
+  Uses NimblePool for connection management.
 
-  ## Features
+  ## Options
 
-    * Unix domain socket communication
-    * Connection pooling with NimblePool for efficient resource management
-    * Automatic connection lifecycle management
-    * Configurable pool size and timeouts
-    * Process registration with via-tuples
-    * Optimized for local node connections
+    * `:path` - Socket path (required)
+    * `:timeout` - Request timeout in ms (default: 30,000)
+    * `:pool_size` - Connection pool size (default: 10)
 
-  ## Configuration Options
+  ## Example
 
-    * `:path` - Required Unix domain socket path (e.g., "/tmp/ethereum.ipc")
-    * `:timeout` - Request timeout in milliseconds (default: 30,000ms)
-    * `:socket_opts` - TCP socket options (default: [:binary, active: false, reuseaddr: true])
-    * `:pool_size` - Number of connections in the pool (default: 10)
-    * `:pool_lazy_workers` - Whether to create workers lazily (default: true)
-    * `:pool_worker_idle_timeout` - Worker idle timeout (default: nil)
-    * `:pool_max_idle_pings` - Maximum idle pings before worker termination (default: -1)
-
-  ## Example Usage
-
-      # Create IPC transport
-      {:ok, transport} = Transport.new(:ipc,
-        path: "/tmp/ethereum.ipc",
-        timeout: 15_000,
-        pool_size: 5
-      )
-
-      # Make IPC request
+      {:ok, transport} = Transport.new(:ipc, path: "/tmp/ethereum.ipc")
       {:ok, response} = Transport.request(transport, json_request)
-
-  ## Connection Pooling
-
-  The IPC transport uses NimblePool to manage a pool of Unix domain socket connections,
-  providing efficient resource utilization and automatic connection lifecycle management.
-
-  ## Best Practices
-
-    * Ensure the socket path exists and is accessible
-    * Configure appropriate pool size for your workload
-    * Monitor connection pool health
-    * Use appropriate timeouts for your use case
   """
 
   use Exth.Transport
