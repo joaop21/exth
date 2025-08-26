@@ -125,7 +125,7 @@ defmodule Exth.Transport do
 
   ## Parameters
 
-    * `adapter_config` - The transport's internal configuration (returned from `init_transport/2`)
+    * `adapter_config` - The transport's internal configuration (returned from `init/1`)
     * `request` - The pre-encoded request string
 
   ## Returns
