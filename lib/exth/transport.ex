@@ -90,8 +90,60 @@ defmodule Exth.Transport do
   ### Behaviour callbacks
   ###
 
+  @doc """
+  Initializes a new transport instance with the given options.
+
+  This callback is called when `Transport.new/2` is invoked. It should perform any
+  necessary setup, validation, and return the transport's internal configuration.
+
+  ## Parameters
+
+    * `transport_options` - Transport-specific configuration options
+
+  ## Returns
+
+    * `{:ok, adapter_config}` - Successfully initialized transport configuration
+    * `{:error, reason}` - Failed to initialize transport
+
+  ## Example
+
+      @impl Exth.Transport
+      def init(opts) do
+        with {:ok, url} <- validate_url(opts[:rpc_url]),
+             {:ok, client} <- build_client(url, opts) do
+          {:ok, %{client: client, url: url}}
+        end
+      end
+  """
   @callback init(transport_options()) :: {:ok, adapter_config()} | {:error, term()}
 
+  @doc """
+  Handles a request using the configured transport.
+
+  This callback is called when `Transport.request/2` is invoked. It should send
+  the request through the transport mechanism and return the response.
+
+  ## Parameters
+
+    * `adapter_config` - The transport's internal configuration (returned from `init_transport/2`)
+    * `request` - The pre-encoded request string
+
+  ## Returns
+
+    * `{:ok, response}` - Successful request with encoded response string
+    * `{:error, reason}` - Request failed
+    * `:ok` - For transports that don't return responses (e.g., WebSocket)
+
+  ## Example
+
+      @impl Exth.Transport
+      def handle_request(%{client: client} = _adapter_config, request) do
+        case send_request(client, request) do
+          {:ok, response} -> {:ok, response}
+          {:error, reason} -> {:error, reason}
+        end
+      end
+  """
   @callback handle_request(transport_state :: adapter_config(), request :: String.t()) ::
               request_response()
 
@@ -204,14 +256,14 @@ defmodule Exth.Transport do
       # Encode your request data first
       request_data = %{
         "jsonrpc" => "2.0",
-        "method" => "eth_blockNumber", 
+        "method" => "eth_blockNumber",
         "params" => [],
         "id" => 1
       }
-      
+
       encoded_request = encode_request(request_data)
       {:ok, encoded_response} = Transport.request(transport, encoded_request)
-      
+
       # Decode the response
       response_data = decode_response(encoded_response)
   """
