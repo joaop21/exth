@@ -6,7 +6,7 @@ defmodule Exth.AsyncTestTransport do
   defstruct [:config]
 
   @impl Exth.Transport
-  def init_transport(opts) do
+  def init(opts) do
     {:ok, %Exth.AsyncTestTransport{config: opts}}
   end
 

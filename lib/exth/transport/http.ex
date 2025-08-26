@@ -55,7 +55,7 @@ defmodule Exth.Transport.Http do
   end
 
   @impl true
-  def init_transport(opts) do
+  def init(opts) do
     with {:ok, rpc_url} <- validate_required_url(opts[:rpc_url]),
          :ok <- validate_url_format(rpc_url),
          client <- build_client(opts, rpc_url) do

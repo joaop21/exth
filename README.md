@@ -298,7 +298,7 @@ defmodule MyCustomTransport do
   use Exth.Transport
 
   @impl Exth.Transport
-  def init_transport(opts) do
+  def init(opts) do
     # Initialize your transport
     {:ok, transport_state}
   end

@@ -5,7 +5,7 @@ defmodule Exth.TransportErrorTestTransport do
   defstruct [:config]
 
   @impl Exth.Transport
-  def init_transport(opts) do
+  def init(opts) do
     {:ok, %Exth.TransportErrorTestTransport{config: opts}}
   end
 

@@ -67,7 +67,7 @@ defmodule Exth.Transport.Ipc do
   @default_socket_opts [:binary, active: false, reuseaddr: true]
 
   @impl true
-  def init_transport(opts) do
+  def init(opts) do
     with {:ok, path} <- validate_required_path(opts[:path]) do
       timeout = opts[:timeout] || @default_timeout
       socket_opts = opts[:socket_opts] || @default_socket_opts

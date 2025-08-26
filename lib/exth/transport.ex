@@ -45,7 +45,7 @@ defmodule Exth.Transport do
         use Exth.Transport
 
         @impl Exth.Transport
-        def init_transport(opts) do
+        def init(opts) do
           # Initialize your transport
           {:ok, transport_state}
         end
@@ -99,7 +99,7 @@ defmodule Exth.Transport do
   ### Behaviour callbacks
   ###
 
-  @callback init_transport(transport_options()) :: {:ok, adapter_config()} | {:error, term()}
+  @callback init(transport_options()) :: {:ok, adapter_config()} | {:error, term()}
 
   @callback handle_request(transport_state :: adapter_config(), request :: String.t()) ::
               request_response()
@@ -138,7 +138,7 @@ defmodule Exth.Transport do
   @spec new(type(), transport_options()) :: {:ok, t()} | {:error, term()}
   def new(type, opts) when type in @transport_types do
     with {:ok, adapter} <- fetch_transport_module(type, opts),
-         {:ok, adapter_config} <- adapter.init_transport(opts) do
+         {:ok, adapter_config} <- adapter.init(opts) do
       {:ok, %__MODULE__{adapter: adapter, adapter_config: adapter_config}}
     end
   end

@@ -16,7 +16,7 @@ defmodule Exth.TestTransport do
   def get_known_methods, do: @known_methods
 
   @impl Exth.Transport
-  def init_transport(opts) do
+  def init(opts) do
     {:ok, %__MODULE__{config: opts}}
   end
 

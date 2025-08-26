@@ -4,7 +4,7 @@ defmodule Exth.Transport.IpcTest do
 
   alias Exth.Transport.Ipc
 
-  describe "init_transport/2 - transport initialization" do
+  describe "init/2 - transport initialization" do
     setup do
       %{
         opts: [path: "/tmp/test.sock"]
@@ -15,7 +15,7 @@ defmodule Exth.Transport.IpcTest do
       pool = %Ipc.ConnectionPool{name: "pool_name"}
       expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, pool} end)
 
-      {:ok, transport} = Ipc.init_transport(opts)
+      {:ok, transport} = Ipc.init(opts)
 
       assert %Ipc{
                path: "/tmp/test.sock",
@@ -35,7 +35,7 @@ defmodule Exth.Transport.IpcTest do
         socket_opts: [:binary, active: false]
       ]
 
-      {:ok, transport} = Ipc.init_transport(opts)
+      {:ok, transport} = Ipc.init(opts)
 
       assert %Ipc{
                path: "/tmp/custom.sock",
@@ -49,14 +49,14 @@ defmodule Exth.Transport.IpcTest do
       opts = Keyword.delete(opts, :path)
 
       assert {:error, "IPC socket path is required but was not provided"} =
-               Ipc.init_transport(opts)
+               Ipc.init(opts)
     end
 
     test "raises error when path is not a string", %{opts: opts} do
       opts = Keyword.put(opts, :path, 123)
 
       assert {:error, "Invalid IPC socket path: expected string, got: 123"} =
-               Ipc.init_transport(opts)
+               Ipc.init(opts)
     end
   end
 
@@ -66,7 +66,7 @@ defmodule Exth.Transport.IpcTest do
       pool = %Ipc.ConnectionPool{name: "pool_name"}
       expect(Ipc.ConnectionPool, :start, fn _opts -> {:ok, pool} end)
 
-      {:ok, transport} = Ipc.init_transport(path: path)
+      {:ok, transport} = Ipc.init(path: path)
 
       {:ok, transport: transport, pool: pool}
     end
